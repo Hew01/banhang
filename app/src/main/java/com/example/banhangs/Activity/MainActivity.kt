@@ -166,11 +166,11 @@ class MainActivity : BaseActivity() {
                 Toast.makeText(this, "No recommended items available", Toast.LENGTH_SHORT).show()
                 val dummyItems = mutableListOf(
                     com.example.banhangs.Model.ProductDetailsModel(
-                        title = "Phone",
+                        name = "Phone",
                         description = "Smartphone",
-                        picUrl = arrayListOf("phone_image"),
+                        galleryImageUrls = arrayListOf("phone_image"),
                         model = arrayListOf("Black", "White"),
-                        price = 500L,
+                        price = 500.00,
                         rating = 4.5,
                         numberInCart = 0,
                         showRecommended = true,

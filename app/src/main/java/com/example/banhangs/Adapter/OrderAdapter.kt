@@ -64,16 +64,16 @@ class OrderItemAdapter(private val items: List<ProductDetailsModel>) : RecyclerV
 
     override fun onBindViewHolder(holder: OrderItemViewHolder, position: Int) {
         val item = items[position]
-        holder.titleTxt.text = item.title
+        holder.titleTxt.text = item.name
         // Sử dụng NumberFormat để định dạng giá
         val formatter = java.text.NumberFormat.getNumberInstance(Locale("vi", "VN"))
         formatter.minimumFractionDigits = 0
         formatter.maximumFractionDigits = 0
         holder.priceTxt.text = "Giá: ${formatter.format(item.price)}$"
-        holder.quantityTxt.text = "Số lượng: ${item.numberInCart}"
+        holder.quantityTxt.text = "Số lượng: ${item.stock}"
         // Thêm placeholder cho Glide
         Glide.with(holder.itemView.context)
-            .load(if (item.picUrl.isNotEmpty()) item.picUrl[0] else R.drawable.placeholder)
+            .load(if (item.galleryImageUrls.isNotEmpty()) item.mainImageUrl else R.drawable.placeholder)
             .into(holder.imageView)
     }
 

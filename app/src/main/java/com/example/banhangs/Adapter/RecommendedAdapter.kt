@@ -26,14 +26,14 @@ class RecommendedAdapter(val items: MutableList<ProductDetailsModel>) :
         val item = items[position]
 
         with(holder.binding) {
-            titleTxt.text = item.title
+            titleTxt.text = item.name
             priceTxt.text = "$${item.price}"
-            ratingTxt.text = item.rating.toString()
+            ratingTxt.text = item.averageRating.toString()
 
             // Kiểm tra nếu picUrl không rỗng để tránh lỗi
-            if (item.picUrl.isNotEmpty()) {
+            if (item.galleryImageUrls?.isNotEmpty() == true) {
                 Glide.with(holder.itemView.context)
-                    .load(item.picUrl[0]) // Lấy hình đầu tiên trong danh sách
+                    .load(item.galleryImageUrls?.get(0)) // Lấy hình đầu tiên trong danh sách
                     .into(pic)
             }
 
@@ -41,7 +41,7 @@ class RecommendedAdapter(val items: MutableList<ProductDetailsModel>) :
             root.setOnClickListener {
                 val intent = Intent(holder.itemView.context, DetailActivity::class.java).apply {
                     putExtra("object", item)
-                    putExtra("itemKey", item.id)
+                    putExtra("itemKey", item.productId)
                 }
                 ContextCompat.startActivity(holder.itemView.context, intent , null)
             }

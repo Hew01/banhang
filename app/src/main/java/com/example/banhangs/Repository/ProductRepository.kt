@@ -43,7 +43,7 @@ class ProductRepository(private val apiService: ApiService) {
                 }
             } catch (e: Exception) {
                 Result.failure(Exception("Failed to get product details: Exception - ${e.message}", e))
-            }
+            } as Result<ProductDetailsModel>
         }
     }
 
@@ -92,7 +92,7 @@ class ProductRepository(private val apiService: ApiService) {
                 // suspend fun searchProducts(@Query("q") query: String): Response<SearchProductsApiResponse>
                 // And SearchProductsApiResponse is typealias for ApiResponse<List<ProductSummaryData>>
 
-                val response = apiService.searchProducts(query) // This should return Response<ApiResponse<List<ProductSummaryData>>>
+                val response = apiService.searchProductsByName(query) // This should return Response<ApiResponse<List<ProductSummaryData>>>
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
                     if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data != null) {

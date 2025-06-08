@@ -219,14 +219,14 @@ class MainViewModel : ViewModel() {
                 try {
                     Log.d("MainViewModel", "Loading items for category ID: $categoryId")
                     // Using the @Path version from ApiService example:
-                    val response = apiService.getItemsByCategoryId(categoryId = categoryId)
+                    val response = apiService.getProductsByCategoryId(categoryId = categoryId)
                     // If using the @Query version, it would be:
                     // val response = apiService.getItemsByCategoryIdQuery(categoryId = categoryId)
 
                     if (response.isSuccessful) {
                         val items = response.body()
                         _itemsByCategoryId.value =
-                            items ?: emptyList() // Post empty list if body is null
+                            (items ?: emptyList()) as List<ProductDetailsModel>? // Post empty list if body is null
                         Log.d(
                             "MainViewModel",
                             "Loaded ${items?.size ?: 0} items for category $categoryId"

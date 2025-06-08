@@ -27,12 +27,12 @@ class SearchAdapter(private var items: MutableList<ProductDetailsModel>) : Recyc
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
-        holder.title.text = item.title
+        holder.title.text = item.name
         holder.price.text = "đ${item.price}"
 
-        if (item.picUrl.isNotEmpty()) {
+        if (item.galleryImageUrls?.isNotEmpty() == true) {
             Glide.with(holder.itemView.context)
-                .load(item.picUrl[0])
+                .load(item.galleryImageUrls?.get(0))
                 .into(holder.image)
         }
     }

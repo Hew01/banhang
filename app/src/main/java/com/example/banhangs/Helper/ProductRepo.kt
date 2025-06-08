@@ -3,8 +3,6 @@ package com.example.banhangs.Helper
 import com.example.banhangs.Model.ApiCommentModel
 import com.example.banhangs.Model.PostCommentRequest
 import com.example.banhangs.Network.ApiService
-import com.example.banhangs.model.*
-import com.example.banhangs.network.ApiService
 
 class ProductRepository(private val apiService: ApiService) {
 
