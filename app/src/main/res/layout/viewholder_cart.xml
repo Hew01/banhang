@@ -48,7 +48,7 @@
         android:textSize="18sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="@+id/feeEachTime" />
+        app:layout_constraintStart_toStartOf="@+id/feeEachItem" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="100dp"

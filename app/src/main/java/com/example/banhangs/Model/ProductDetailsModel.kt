@@ -6,7 +6,7 @@ import kotlinx.parcelize.Parcelize // Import for @Parcelize
 
 @Parcelize // Add this annotation
 data class ProductDetailsModel(
-    @SerializedName("productId") val productId: String,
+    @SerializedName("productId") var productId: String,
     @SerializedName("name") val name: String,
     @SerializedName("shortDescription") val shortDescription: String?,
     @SerializedName("description") val description: String?,

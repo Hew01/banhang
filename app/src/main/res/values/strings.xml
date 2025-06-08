@@ -70,6 +70,7 @@
     <string name="network_error_message">Network error. Please check your connection.</string>
     <string name="unexpected_error_message">An unexpected error occurred. Please try again later.</string>
     <string name="user_not_authenticated">User not authenticated. Please log in.</string>
+    <string name="slider_image_description">image_description_here</string>
 
 
 </resources>

@@ -1,5 +1,6 @@
 package com.example.banhangs.Adapter
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -24,7 +25,7 @@ class SelectedModelAdapter(val items:MutableList<String>) : RecyclerView.Adapter
         return  ViewHolder(bingding)
     }
 
-    override fun onBindViewHolder(holder: SelectedModelAdapter.ViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: SelectedModelAdapter.ViewHolder, @SuppressLint("RecyclerView") position: Int) {
         holder.bingding.modelTxt.text = items[position]
 
 

@@ -115,6 +115,4 @@ class CategoryAdapter(private var items: MutableList<CategoryModel>) : // Use pr
         items.addAll(newItems)
         notifyDataSetChanged()
     }
-
-    class ViewHolder(val binding: ViewholderCategoryBinding) : RecyclerView.ViewHolder(binding.root)
 }

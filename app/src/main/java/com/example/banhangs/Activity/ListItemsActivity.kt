@@ -81,19 +81,25 @@ class ListItemsActivity : BaseActivity() {
     }
 
     private fun observeViewModel() {
-        viewModel.recommended.observe(this) { items ->
+        viewModel.recommendedItems.observe(this) { items ->
             if (searchQuery.isEmpty()) { // Only update if not in search mode from intent
-                Log.d(TAG, "Observed items for category '$categoryId': size=${items.size}")
-                if (items.isNotEmpty()) {
-                    updateAdapter(items.toMutableList())
-                    // binding.emptyListTxt.visibility = View.GONE // REMOVED
-                } else {
-                    // If items are empty, categoryTxt will show the category title or "No products..."
-                    // No separate empty text view to manage.
-                    // You might want to update categoryTxt here if items are empty for a category.
-                    binding.categoryTxt.text = "Không có sản phẩm trong mục: $categoryTitle"
-                    updateAdapter(mutableListOf())
-                    // binding.emptyListTxt.visibility = View.VISIBLE // REMOVED
+                if (items != null) {
+                    Log.d(TAG, "Observed items for category '$categoryId': size=${items.size}")
+                }
+                if (items != null) {
+                    if (items.isNotEmpty()) {
+                        if (items != null) {
+                            updateAdapter(items.toMutableList())
+                        }
+                        // binding.emptyListTxt.visibility = View.GONE // REMOVED
+                    } else {
+                        // If items are empty, categoryTxt will show the category title or "No products..."
+                        // No separate empty text view to manage.
+                        // You might want to update categoryTxt here if items are empty for a category.
+                        binding.categoryTxt.text = "Không có sản phẩm trong mục: $categoryTitle"
+                        updateAdapter(mutableListOf())
+                        // binding.emptyListTxt.visibility = View.VISIBLE // REMOVED
+                    }
                 }
                 binding.progressBarList.visibility = View.GONE
             }

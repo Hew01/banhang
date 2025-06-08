@@ -5,8 +5,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("com.google.gms.google-services") // Firebase
     id("kotlin-parcelize")
-
-    //vừa thêm đoạn 47.22
+    id("kotlin-android")
     id("kotlin-kapt")
 }
 

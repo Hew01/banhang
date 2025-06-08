@@ -1,5 +1,6 @@
 package com.example.banhangs.Adapter
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -27,7 +28,7 @@ class PicAdapter(val items:MutableList<String>, private  val onImageSelected:(St
         return items.size
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: ViewHolder, @SuppressLint("RecyclerView") position: Int) {
         val item =items[position]
         holder.binding.pic.loadImage(item)
 

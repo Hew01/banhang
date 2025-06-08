@@ -1,4 +1,4 @@
-// In com/example/banhangs/Adapter/SliderAdapter.kt
+
 package com.example.banhangs.Adapter
 
 import android.view.LayoutInflater

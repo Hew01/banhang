@@ -33,7 +33,7 @@ class MainViewModel : ViewModel() {
                 for (childSnapshot in snapshot.children) {
                     val item = childSnapshot.getValue(ProductDetailsModel::class.java)
                     if (item != null) {
-                        item?.id = childSnapshot.key.toString()
+                        item.productId = childSnapshot.key.toString()
                         lists.add(item)
                     }
                 }
@@ -58,7 +58,7 @@ class MainViewModel : ViewModel() {
                 for (childSnapshot in snapshot.children) {
                     val item = childSnapshot.getValue(ProductDetailsModel::class.java)
                     if (item != null) {
-                        item.id = childSnapshot.key ?: ""
+                        item.productId = childSnapshot.key ?: ""
                         lists.add(item)
                     }
                 }
