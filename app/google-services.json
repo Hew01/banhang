@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "987883392201",
+    "firebase_url": "https://doancoso3-9fcc2-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "doancoso3-9fcc2",
+    "storage_bucket": "doancoso3-9fcc2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:987883392201:android:05d0734fb6aa0681ce9118",
+        "android_client_info": {
+          "package_name": "com.example.banhangs"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAExaNfOomcUNBGWNLd9svyKv0xSNm4axo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

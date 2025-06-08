@@ -1,0 +1,37 @@
+<resources>
+    <string name="app_name">banhangs</string>
+
+    <string name="action_settings">Settings</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Second Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="intro_title">Chào mừng đến với <font color="#00e100">PK Store</font>, nơi có những sản phẩm công nghệ bạn muốn</string>
+    <string name="intro_sub_title" translatable="false"> Bạn chưa có tài khoản? \n
+        Đăng ký ngay và tận hưởng trải nghiệm mua sắm liền mạch \n
+        và an toàn. </string>
+    <string name="signing">Bạn đã có tài khoản?<font color="#39c7a5"> Đăng nhập</font></string>
+    <string name="recommendation">Sản phẩm nổi bật</string>
+    <string name="see_all">See All</string>
+    <string name="profile">Tôi</string>
+    <string name="my_order">Đơn đã mua</string>
+    <string name="wishlist">Wishlist</string>
+    <string name="cart">Giỏ hàng</string>
+    <string name="explorer">Home</string>
+    <string name="my_cart">Giỏ hàng</string>
+    <string name="subtotal">Giá</string>
+    <string name="fee_delivery">Phi giao hàng</string>
+    <string name="total_tax">Thuế</string>
+    <string name="total">Tổng giá</string>
+    <string name="payment_method">Phương thức thanh toán</string>
+    <string name="n_p_ti_n_v_o_donate_cho_tao_t_5_qu_tr_ng_nhi_u_1_t_n_l_a">Thanh toán khi nhận hàng</string>
+    <string name="nh_ng_ai_y_u_anh_anh_kh_ng_th_c_n_c">Thanh toán qua các app ngân hàng</string>
+    <string name="danh_m_c">Danh mục</string>
+
+    <string name="search_hint">Tìm kiếm sản phẩm...</string>
+    <string name="no_results">Không tìm thấy kết quả</string>
+    <string name="min_characters">Vui lòng nhập ít nhất 2 ký tự</string>
+    <string name="chat">Chat</string>
+
+</resources>
