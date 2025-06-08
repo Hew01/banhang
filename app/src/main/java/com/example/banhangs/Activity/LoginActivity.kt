@@ -18,6 +18,7 @@ import com.example.banhangs.Model.LoginApiResponse
 import com.example.banhangs.R
 import com.example.banhangs.Network.RetrofitClient // Your Retrofit client
 import com.example.banhangs.Model.LoginRequest
+import com.example.banhangs.Model.UserData
 import kotlinx.coroutines.launch
 import java.io.IOException
 
@@ -68,66 +69,41 @@ import java.io.IOException
                 }
                 lifecycleScope.launch {
                     try {
-                        if (LoginApiResponse != null && LoginApiResponse.retCode == 0 && LoginApiResponse.data != null) {
-                            val token = LoginApiResponse.data.token
-                            val user = LoginApiResponse.data.user // Assuming user is your UserModel
-
-                            sessionManager.saveAuthToken(token)
-
-                            val userName = "${user.firstName ?: ""} ${user.lastName ?: ""}".trim()
-                            if (userName.isEmpty()) {
-                                // Fallback if names are not available, or use email/username
-                                sessionManager.saveUserDetails(
-                                    user.userId,
-                                    user.email ?: loginIdentifier
-                                )
-                            } else {
-                                sessionManager.saveUserDetails(user.userId, userName)
-                            }
-                        }
                         val loginRequest = LoginRequest(loginIdentifier, pass)
-                        val response = apiService.login(loginRequest) // Assuming apiService.login() is your suspend function
-
-                        // Hide loading indicator
-                        // binding.progressBar.visibility = View.GONE
+                        val response = apiService.login(loginRequest) // apiService.login() returns Response<LoginApiResponse>
 
                         if (response.isSuccessful) {
-                            val loginApiResponse = response.body()
-                            if (loginApiResponse != null && loginApiResponse.retCode == 0 && loginApiResponse.data != null) { // Check retCode for success
+                            val loginApiResponse = response.body() // This is your LoginApiResponse INSTANCE
+
+                            // NOW, check the properties of the 'loginApiResponse' INSTANCE
+                            if (loginApiResponse != null && loginApiResponse.retCode == 0 && loginApiResponse.data != null) {
                                 val token = loginApiResponse.data.token
-                                val user = loginApiResponse.data.user
+                                val userFromApi = loginApiResponse.data.user // This is your UserData object from the API
 
                                 sessionManager.saveAuthToken(token)
-
-                                val userName = "${user.firstName ?: ""} ${user.lastName ?: ""}".trim()
-                                if (userName.isEmpty()) {
-                                    sessionManager.saveUserDetails(
-                                        user.userId,
-                                        user.email ?: loginIdentifier // Fallback to email or loginIdentifier
-                                    )
-                                } else {
-                                    sessionManager.saveUserDetails(user.userId, userName)
-                                }
+                                sessionManager.saveUserDetails(userFromApi) // Pass the UserData object directly
 
                                 Toast.makeText(this@LoginActivity, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show()
-                                Log.i("LoginActivity", "Login successful. Token: $token, UserID: ${user.userId}")
+                                Log.i("LoginActivity", "Login successful. Token: $token, UserID: ${userFromApi.userId}")
 
-                                // Navigate to MainActivity or another appropriate activity
                                 val intent = Intent(this@LoginActivity, MainActivity::class.java)
                                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                                 startActivity(intent)
-                                finish() // Finish LoginActivity so user can't go back to it with back button
-
+                                finish()
                             } else {
-                                // Handle API-specific errors (e.g., wrong credentials, user not found)
                                 val errorMessage = loginApiResponse?.systemMessage ?: "Đăng nhập thất bại. Vui lòng thử lại."
                                 Toast.makeText(this@LoginActivity, errorMessage, Toast.LENGTH_LONG).show()
-                                Log.e("LoginActivity", "Login failed: ${loginApiResponse?.retCode} - ${loginApiResponse?.systemMessage} - ${response.errorBody()?.string()}")
+                                Log.e(
+                                    "LoginActivity",
+                                    "Login API error: RetCode=${loginApiResponse?.retCode}, Message='${loginApiResponse?.systemMessage}', ErrorBody='${
+                                        response.errorBody()?.string()
+                                    }'"
+                                )
                             }
                         } else {
-                            // Handle HTTP errors (e.g., 401, 404, 500)
+                            val errorBody = response.errorBody()?.string()
                             Toast.makeText(this@LoginActivity, "Lỗi kết nối: ${response.code()}", Toast.LENGTH_LONG).show()
-                            Log.e("LoginActivity", "Login HTTP error: ${response.code()} - ${response.message()} - ${response.errorBody()?.string()}")
+                            Log.e("LoginActivity", "Login HTTP error: ${response.code()} - ${response.message()} - ErrorBody: '$errorBody'")
                         }
                     } catch (e: IOException) {
                         // Hide loading indicator

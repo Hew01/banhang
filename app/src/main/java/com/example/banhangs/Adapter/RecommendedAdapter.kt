@@ -1,52 +1,51 @@
+// In com/example/banhangs/Adapter/RecommendedAdapter.kt
 package com.example.banhangs.Adapter
 
-import android.content.Intent
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.banhangs.Activity.DetailActivity
-import com.example.banhangs.Model.ProductDetailsModel
-import com.example.banhangs.databinding.ViewholderRecommendedBinding
+import com.example.banhangs.Model.ProductDetailsModel // Or ProductSummaryData if that's what you use here
+import com.example.banhangs.databinding.ViewholderRecommendedBinding // Assuming this is your item layout binding
 
-class RecommendedAdapter(val items: MutableList<ProductDetailsModel>) :
-    RecyclerView.Adapter<RecommendedAdapter.Viewholder>() {
+class RecommendedAdapter(private var items: MutableList<ProductDetailsModel>) :
+    RecyclerView.Adapter<RecommendedAdapter.ViewHolder>() {
 
-    class Viewholder(val binding: ViewholderRecommendedBinding) : RecyclerView.ViewHolder(binding.root)
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Viewholder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ViewholderRecommendedBinding.inflate(
-            LayoutInflater.from(parent.context), parent, false
+            LayoutInflater.from(parent.context),
+            parent,
+            false
         )
-        return Viewholder(binding)
+        return ViewHolder(binding)
     }
 
-    override fun onBindViewHolder(holder: Viewholder, position: Int) {
-        val item = items[position]
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val currentItem = items[position]
+        holder.binding.titleTxt.text = currentItem.name
+        holder.binding.priceTxt.text = String.format("$%.2f", currentItem.price) // Example formatting
+        // holder.binding.ratingTxt.text = currentItem.averageRating.toString() // If you have rating
 
-        with(holder.binding) {
-            titleTxt.text = item.name
-            priceTxt.text = "$${item.price}"
-            ratingTxt.text = item.averageRating.toString()
+        Glide.with(holder.itemView.context)
+            .load(currentItem.mainImageUrl) // Assuming mainImageUrl is the field
+            // .placeholder(R.drawable.placeholder_image) // Optional placeholder
+            // .error(R.drawable.error_image) // Optional error image
+            .into(holder.binding.pic)
 
-            // Kiểm tra nếu picUrl không rỗng để tránh lỗi
-            if (item.galleryImageUrls?.isNotEmpty() == true) {
-                Glide.with(holder.itemView.context)
-                    .load(item.galleryImageUrls?.get(0)) // Lấy hình đầu tiên trong danh sách
-                    .into(pic)
-            }
-
-            // Xử lý sự kiện click vào item
-            root.setOnClickListener {
-                val intent = Intent(holder.itemView.context, DetailActivity::class.java).apply {
-                    putExtra("object", item)
-                    putExtra("itemKey", item.productId)
-                }
-                ContextCompat.startActivity(holder.itemView.context, intent , null)
-            }
+        // Handle item click if needed
+        holder.itemView.setOnClickListener {
+            // Intent to ProductDetailActivity, pass currentItem.productId or the object
         }
     }
 
     override fun getItemCount(): Int = items.size
+
+    // THIS IS THE IMPORTANT METHOD
+    fun updateData(newItems: List<ProductDetailsModel>) {
+        items.clear()
+        items.addAll(newItems)
+        notifyDataSetChanged() // For simplicity. Consider DiffUtil for better performance.
+    }
+
+    class ViewHolder(val binding: ViewholderRecommendedBinding) : RecyclerView.ViewHolder(binding.root)
 }

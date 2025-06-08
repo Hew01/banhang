@@ -224,7 +224,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="@string/n_p_ti_n_v_o_donate_cho_tao_t_5_qu_tr_ng_nhi_u_1_t_n_l_a"
+                        android:text="@string/paycheck"
 
                         android:textColor="@color/green" />
                 </LinearLayout>
@@ -269,7 +269,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="@string/nh_ng_ai_y_u_anh_anh_kh_ng_th_c_n_c"
+                        android:text="@string/bank_paycheck"
 
                         android:textColor="@color/darkGrey" />
                 </LinearLayout>

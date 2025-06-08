@@ -14,5 +14,27 @@
     <color name="card_background">#FFFFFF</color>
     <color name="text_primary">#212121</color>
     <color name="text_secondary">#757575</color>
+    <color name="background_color_light_gray">#F5F5F5</color>
+    <color name="text_primary_color">#212121</color>
+    <color name="text_secondary_color">#757575</color>
+
+    <color name="status_pending_bg">#FFF3E0</color> <!-- Light Orange -->
+    <color name="status_pending_text">#E65100</color> <!-- Dark Orange -->
+    <color name="status_processing_bg">#E3F2FD</color> <!-- Light Blue -->
+    <color name="status_processing_text">#0D47A1</color> <!-- Dark Blue -->
+    <color name="status_delivering_bg">#E8EAF6</color> <!-- Light Indigo -->
+    <color name="status_delivering_text">#1A237E</color> <!-- Dark Indigo -->
+    <color name="status_completed_bg">#E8F5E9</color> <!-- Light Green -->
+    <color name="status_completed_text">#1B5E20</color> <!-- Dark Green -->
+    <color name="status_canceled_bg">#FFEBEE</color> <!-- Light Red -->
+    <color name="status_canceled_text">#B71C1C</color> <!-- Dark Red -->
+    <color name="status_failed_bg">#FFEBEE</color> <!-- Light Red -->
+    <color name="status_failed_text">#B71C1C</color> <!-- Dark Red -->
+    <color name="status_refunded_bg">#FCE4EC</color> <!-- Light Pink -->
+    <color name="status_refunded_text">#880E4F</color> <!-- Dark Pink -->
+    <color name="status_unknown_bg">#ECEFF1</color> <!-- Light Gray -->
+    <color name="status_unknown_text">#37474F</color> <!-- Dark Gray -->
+
+    <color name="default_product_placeholder_bg">#EEEEEE</color>
 
 </resources>

@@ -11,6 +11,7 @@ import com.example.banhangs.Model.GenericSuccessApiResponse
 import com.example.banhangs.Model.ProductDetailsModel
 import com.example.banhangs.Model.LoginApiResponse
 import com.example.banhangs.Model.LoginRequest
+import com.example.banhangs.Model.OrdersApiResponse
 import com.example.banhangs.Model.PostCommentRequest
 import com.example.banhangs.Model.ProductDetailsApiResponse
 import com.example.banhangs.Model.ProductsByCategoryApiResponse
@@ -24,6 +25,7 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -46,7 +48,7 @@ interface ApiService {
     @GET("api/products/search") // <<<< YOUR ACTUAL SEARCH ENDPOINT PATH
     suspend fun searchProductsByName(
         @Query("search_term") searchTerm: String // <<<< YOUR ACTUAL QUERY PARAMETER NAME FOR THE SEARCH TERM
-    ): Response<List<ProductDetailsModel>> // Assuming the API returns a list of items
+    ): Response<List<ProductDetailsApiResponse>> // Assuming the API returns a list of items
 
     @GET("api/products/category/{categoryId}") // Or your actual path, e.g., "api/Product/GetProductsByCategory"
     suspend fun getProductsByCategory(@Path("categoryId") categoryId: String): Response<ProductsByCategoryApiResponse>
@@ -104,4 +106,7 @@ interface ApiService {
         @Body commentRequest: PostCommentRequest
     ): Response<ApiResponse<ApiCommentModel>> // Assuming API returns the created comment
     // Or: Response<GenericSuccessApiResponse> if it just returns success:true
+
+    @GET("api/Orders")
+    suspend fun getOrders(@Header("Authorization") token: String): Response<OrdersApiResponse>
 }

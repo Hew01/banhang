@@ -25,13 +25,51 @@
     <string name="total_tax">Thuế</string>
     <string name="total">Tổng giá</string>
     <string name="payment_method">Phương thức thanh toán</string>
-    <string name="n_p_ti_n_v_o_donate_cho_tao_t_5_qu_tr_ng_nhi_u_1_t_n_l_a">Thanh toán khi nhận hàng</string>
-    <string name="nh_ng_ai_y_u_anh_anh_kh_ng_th_c_n_c">Thanh toán qua các app ngân hàng</string>
+    <string name="paycheck">Thanh toán khi nhận hàng</string>
+    <string name="bank_paycheck">Thanh toán qua các app ngân hàng</string>
     <string name="danh_m_c">Danh mục</string>
 
     <string name="search_hint">Tìm kiếm sản phẩm...</string>
     <string name="no_results">Không tìm thấy kết quả</string>
     <string name="min_characters">Vui lòng nhập ít nhất 2 ký tự</string>
     <string name="chat">Chat</string>
+
+    <string name="my_orders_title">My Orders</string>
+    <string name="order_id_prefix">Order #%s</string>
+    <string name="order_date_prefix">Date: %s</string>
+    <string name="order_total_prefix">Total: %s</string>
+    <string name="order_status_prefix">Status: %s</string>
+    <string name="more_items_format">+ %d more items</string>
+    <string name="default_product_image_desc">Default product image</string>
+    <string name="first_item_image_desc">Image of the first item in the order</string>
+
+    <string name="status_pending">Pending</string>
+    <string name="status_processing">Processing</string>
+    <string name="status_delivering">Delivering</string>
+    <string name="status_completed">Completed</string>
+    <string name="status_canceled">Canceled</string>
+    <string name="status_refunded">Refunded</string>
+    <string name="status_failed">Failed</string>
+    <string name="status_unknown">Unknown Status</string>
+
+    <string name="no_orders_yet">You have no orders yet.</string>
+    <string name="please_log_in_to_view_orders">Please log in to view your orders.</string>
+    <string name="error_loading_orders">Error loading orders. Please try again.</string>
+    <string name="profile_info_delivery_title">Delivery Information</string>
+    <string name="profile_name_prefix">Name: %s</string>
+    <string name="profile_address_prefix">Address: %s</string>
+    <string name="profile_phone_prefix">Phone: %s</string>
+    <string name="profile_not_updated">Not Updated</string>
+    <string name="update_profile_prompt">Please update your address and phone number in your profile.</string>
+    <string name="orders_list_title">Order List</string>
+
+    <string name="please_enter_product_name">Vui lòng nhập tên sản phẩm</string>
+    <string name="no_products_found_for_query">Không tìm thấy sản phẩm nào cho \'%1$s\'</string>
+    <string name="default_customer_name">Khách hàng</string>
+
+    <string name="network_error_message">Network error. Please check your connection.</string>
+    <string name="unexpected_error_message">An unexpected error occurred. Please try again later.</string>
+    <string name="user_not_authenticated">User not authenticated. Please log in.</string>
+
 
 </resources>

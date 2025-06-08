@@ -1,5 +1,8 @@
 package com.example.banhangs.Repository
 
+import androidx.annotation.OptIn
+import androidx.media3.common.util.Log
+import androidx.media3.common.util.UnstableApi
 import com.example.banhangs.Model.* // Import your models including ProductDetailsModel
 import com.example.banhangs.Network.ApiService // Your Retrofit ApiService interface
 import kotlinx.coroutines.Dispatchers
@@ -77,7 +80,7 @@ class ProductRepository(private val apiService: ApiService) {
                 }
             } catch (e: Exception) {
                 Result.failure(Exception("Failed to get products by category: Exception - ${e.message}", e))
-            }
+            } as Result<List<ProductDetailsModel>>
         }
     }
 
@@ -85,6 +88,7 @@ class ProductRepository(private val apiService: ApiService) {
      * Searches for products based on a query string.
      * @param query The search term.
      */
+    @OptIn(UnstableApi::class)
     suspend fun searchProducts(query: String): Result<List<ProductDetailsModel>> {
         return withContext(Dispatchers.IO) {
             try {
@@ -92,16 +96,75 @@ class ProductRepository(private val apiService: ApiService) {
                 // suspend fun searchProducts(@Query("q") query: String): Response<SearchProductsApiResponse>
                 // And SearchProductsApiResponse is typealias for ApiResponse<List<ProductSummaryData>>
 
-                val response = apiService.searchProductsByName(query) // This should return Response<ApiResponse<List<ProductSummaryData>>>
+                val response = apiService.searchProductsByName(query) // Pass the query to the correct parameter name
+
                 if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data != null) {
-                        // apiResponse.data is List<ProductSummaryData> (DTOs)
-                        // Result.success(apiResponse.data.map { it.toDomainModel() })
-                        Result.success(apiResponse.data) // If ProductDetailsModel is directly in ApiResponse.data
+                    val listOfApiResponses: List<ProductDetailsApiResponse>? = response.body()
+
+                    if (listOfApiResponses != null) {
+                        val successfulProducts = mutableListOf<ProductDetailData>()
+                        var firstErrorRetCode: Int? = null
+                        var firstErrorMessage: String? = null
+                        var allSuccessful = true
+
+                        for (apiResponseItem in listOfApiResponses) {
+                            // Now, apiResponseItem is ApiResponse<ProductDetailData>
+                            // So, apiResponseItem.retCode and apiResponseItem.data are valid
+                            if (apiResponseItem.retCode == 0 && apiResponseItem.data != null) {
+                                successfulProducts.add(apiResponseItem.data)
+                            } else {
+                                allSuccessful = false
+                                if (firstErrorRetCode == null) { // Capture the first error encountered
+                                    firstErrorRetCode = apiResponseItem.retCode
+                                    firstErrorMessage = apiResponseItem.systemMessage ?: "Search item failed with no message."
+                                }
+                                Log.e("ProductRepository", "Search item failed: RetCode=${apiResponseItem.retCode}, Message='${apiResponseItem.systemMessage}' for a product in search results.")
+                                // Decide if you want to stop processing or collect all successful ones
+                            }
+                        }
+
+                        if (successfulProducts.isNotEmpty()) {
+                            // Map the successful ProductDetailData (DTOs) to ProductDetailsModel (Domain Models)
+                            val domainModels = successfulProducts.map { productDetailData ->
+                                // Assuming ProductDetailsModel is your domain model and you have a mapping
+                                ProductDetailsModel(
+                                    productId = productDetailData.productId,
+                                    name = productDetailData.name,
+                                    description = productDetailData.description
+                                        ?: productDetailData.shortDescription ?: "",
+                                    price = productDetailData.price,
+                                    averageRating = productDetailData.averageRating ?: 0.0,
+                                    ratedCount = productDetailData.ratedCount ?: 0,
+                                    mainImageUrl = productDetailData.mainImageUrl,
+                                    galleryImageUrls = productDetailData.galleryImageUrls
+                                        ?: emptyList(),
+                                    stock = productDetailData.stock ?: 0,
+                                    categoryName = productDetailData.categoryName,
+                                    brandName = productDetailData.brandName,
+                                    salePrice = productDetailData.salePrice,
+                                    isOnSale = productDetailData.isOnSale
+                                        ?: (productDetailData.salePrice != null),
+                                    shortDescription = null,
+                                    soldCount = null,
+                                    saleStart = null,
+                                    saleEnd = null,
+                                    categoryId = null,
+                                    brandId = null,
+                                    isFeatured = null
+                                )
+                            }
+                            Result.success(domainModels)
+                        } else if (!allSuccessful) {
+                            // All items in the list failed or the list was empty but contained errors
+                            val errorMessage = "Failed to search products: API Error on items - First Error RetCode: ${firstErrorRetCode}, Message: ${firstErrorMessage}"
+                            Result.failure(Exception(errorMessage))
+                        } else {
+                            // List was empty and no errors (e.g., search returned no results but was successful)
+                            Result.success(emptyList()) // No products found
+                        }
                     } else {
-                        val errorMessage = "Failed to search products: API Error - RetCode: ${apiResponse?.retCode}, Message: ${apiResponse?.systemMessage ?: response.message()}"
-                        Result.failure(Exception(errorMessage))
+                        // response.body() was null, which is unusual for a successful response but possible
+                        Result.failure(Exception("Failed to search products: Empty response body."))
                     }
                 } else {
                     Result.failure(Exception("Failed to search products: Network Error - Code: ${response.code()}, Message: ${response.message()}"))
@@ -111,6 +174,7 @@ class ProductRepository(private val apiService: ApiService) {
             }
         }
     }
+
 
     /**
      * Fetches comments for a specific product.

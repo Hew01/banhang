@@ -1,81 +1,204 @@
 package com.example.banhangs.Adapter
 
+import android.content.res.ColorStateList // Import this
+import android.util.Log // For logging errors
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.TextView
-import androidx.recyclerview.widget.LinearLayoutManager
+import android.widget.Toast
+import androidx.core.content.ContextCompat // Import this
+import androidx.recyclerview.widget.AsyncListDiffer
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.example.banhangs.Model.ProductDetailsModel
-import com.example.banhangs.Model.OrderModel
-import com.example.banhangs.R
 import com.bumptech.glide.Glide
+import com.example.banhangs.Model.OrderData
+import com.example.banhangs.R
+import com.example.banhangs.databinding.ViewholderOrderBinding
+import java.text.DecimalFormat
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
-class OrderAdapter(private val orders: List<OrderModel>) : RecyclerView.Adapter<OrderAdapter.OrderViewHolder>() {
 
-    class OrderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val dateTxt: TextView = itemView.findViewById(R.id.dateTxt)
-        val itemsRecyclerView: RecyclerView = itemView.findViewById(R.id.itemsRecyclerView)
-        val totalTxt: TextView = itemView.findViewById(R.id.totalTxt)
-        val statusTxt: TextView = itemView.findViewById(R.id.statusTxt)
+class OrderAdapter(private var orders: MutableList<OrderData> = mutableListOf()) :
+    RecyclerView.Adapter<OrderAdapter.OrderViewHolder>() {
+
+    // For date formatting
+    private val inputApiFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+    private val outputDisplayFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+    private val priceFormatter = DecimalFormat("#,### đ")
+
+    init {
+        inputApiFormat.timeZone = TimeZone.getTimeZone("UTC")
+        outputDisplayFormat.timeZone = TimeZone.getDefault()
     }
 
+    private val diffCallback = object : DiffUtil.ItemCallback<OrderData>() {
+        override fun areItemsTheSame(oldItem: OrderData, newItem: OrderData): Boolean {
+            return oldItem.orderId == newItem.orderId
+        }
+
+        override fun areContentsTheSame(oldItem: OrderData, newItem: OrderData): Boolean {
+            return oldItem == newItem
+        }
+    }
+    private val differ = AsyncListDiffer(this, diffCallback)
+
+    fun updateOrders(newOrders: List<OrderData>) {
+        differ.submitList(newOrders.toList()) // Submit a copy to be safe
+    }
+
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): OrderViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_order, parent, false)
-        return OrderViewHolder(view)
+        val binding = ViewholderOrderBinding.inflate(
+            LayoutInflater.from(parent.context),
+            parent,
+            false
+        )
+        return OrderViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: OrderViewHolder, position: Int) {
-        val order = orders[position]
-        val date = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(order.timestamp))
-        holder.dateTxt.text = "Ngày: $date"
-        // Sử dụng NumberFormat để định dạng tổng tiền cho nhất quán với CartActivity
-        val formatter = java.text.NumberFormat.getNumberInstance(Locale("vi", "VN"))
-        formatter.minimumFractionDigits = 0
-        formatter.maximumFractionDigits = 0
-        holder.totalTxt.text = "Tổng: ${formatter.format(order.total.toLong())}$"
-        holder.statusTxt.text = "Trạng thái: ${order.status}"
-
-        // Hiển thị danh sách sản phẩm trong đơn hàng
-        holder.itemsRecyclerView.layoutManager = LinearLayoutManager(holder.itemView.context, LinearLayoutManager.VERTICAL, false)
-        holder.itemsRecyclerView.adapter = OrderItemAdapter(order.items)
+        val order = differ.currentList[position]
+        holder.bind(order)
     }
 
-    override fun getItemCount(): Int = orders.size
-}
+    override fun getItemCount(): Int = differ.currentList.size
 
-class OrderItemAdapter(private val items: List<ProductDetailsModel>) : RecyclerView.Adapter<OrderItemAdapter.OrderItemViewHolder>() {
+    inner class OrderViewHolder(private val binding: ViewholderOrderBinding) :
+        RecyclerView.ViewHolder(binding.root) {
 
-    class OrderItemViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val titleTxt: TextView = itemView.findViewById(R.id.titleTxt)
-        val priceTxt: TextView = itemView.findViewById(R.id.priceTxt)
-        val quantityTxt: TextView = itemView.findViewById(R.id.quantityTxt)
-        val imageView: ImageView = itemView.findViewById(R.id.imageView)
+        fun bind(order: OrderData) {
+            binding.orderIdTxt.text = itemView.context.getString(R.string.order_id_prefix, order.orderId)
+
+            try {
+                order.createdAt?.let {
+                    val date = try {
+                        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).apply {
+                            timeZone = TimeZone.getTimeZone("UTC")
+                        }.parse(it)
+                    } catch (e1: Exception) {
+                        try {
+                            SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault()).apply {
+                                timeZone = TimeZone.getTimeZone("UTC")
+                            }.parse(it)
+                        } catch (e2: Exception) {
+                            inputApiFormat.parse(it)
+                        }
+                    }
+                    binding.orderDateTxt.text = itemView.context.getString(R.string.order_date_prefix, outputDisplayFormat.format(date!!))
+                } ?: run {
+                    binding.orderDateTxt.text = itemView.context.getString(R.string.order_date_prefix, "N/A")
+                }
+            } catch (e: Exception) {
+                binding.orderDateTxt.text = itemView.context.getString(R.string.order_date_prefix, "Invalid Date")
+                Log.e("OrderAdapter", "Date parsing error for ${order.createdAt}: ${e.message}")
+            }
+
+            binding.orderTotalTxt.text = itemView.context.getString(R.string.order_total_prefix, priceFormatter.format(order.finalAmount ?: 0.0))
+
+            // --- START OF MODIFICATION for status appearance ---
+            val statusString = getOrderStatusText(order.orderStatus, itemView.context) // Pass context
+            binding.orderStatusTxt.text = statusString // Set the text directly
+            setOrderStatusAppearance(order.orderStatus)
+            // --- END OF MODIFICATION for status appearance ---
+
+            if (!order.items.isNullOrEmpty()) {
+                val firstItem = order.items[0]
+                binding.firstItemNameTxt.text = firstItem.productName ?: "Item Details Unavailable"
+                Glide.with(itemView.context)
+                    .load(firstItem.mainImageUrl)
+                    .placeholder(R.drawable.rounded_background)
+                    .error(R.drawable.rounded_background)
+                    .into(binding.firstItemImg)
+                binding.firstItemImg.visibility = View.VISIBLE
+                binding.firstItemNameTxt.visibility = View.VISIBLE
+
+                if (order.items.size > 1) {
+                    binding.moreItemsTxt.text = itemView.context.getString(R.string.more_items_format, order.items.size - 1)
+                    binding.moreItemsTxt.visibility = View.VISIBLE
+                } else {
+                    binding.moreItemsTxt.visibility = View.GONE
+                }
+
+            } else {
+                binding.firstItemNameTxt.text = "No items in this order"
+                // Consider setting a placeholder or hiding the ImageView if no image
+                binding.firstItemImg.setImageResource(R.drawable.rounded_background)
+                binding.firstItemImg.visibility = View.VISIBLE // Or View.GONE
+                binding.moreItemsTxt.visibility = View.GONE
+            }
+
+            itemView.setOnClickListener {
+                Toast.makeText(itemView.context, "Clicked on order: ${order.orderId}", Toast.LENGTH_SHORT).show()
+                // TODO: Implement click listener to navigate to OrderDetailActivity
+                // Example:
+                // val intent = Intent(itemView.context, OrderDetailActivity::class.java)
+                // intent.putExtra("ORDER_ID", order.orderId)
+                // itemView.context.startActivity(intent)
+            }
+        }
+
+        // --- ADD THIS HELPER METHOD INSIDE OrderViewHolder ---
+        private fun setOrderStatusAppearance(status: Int?) {
+            val context = itemView.context
+            var backgroundColorRes = R.color.status_unknown_bg
+            var textColorRes = R.color.status_unknown_text
+
+            when (status) {
+                0 -> { // Pending
+                    backgroundColorRes = R.color.status_pending_bg
+                    textColorRes = R.color.status_pending_text
+                }
+                1 -> { // Processing
+                    backgroundColorRes = R.color.status_processing_bg
+                    textColorRes = R.color.status_processing_text
+                }
+                2 -> { // Delivering
+                    backgroundColorRes = R.color.status_delivering_bg
+                    textColorRes = R.color.status_delivering_text
+                }
+                3 -> { // Completed
+                    backgroundColorRes = R.color.status_completed_bg
+                    textColorRes = R.color.status_completed_text
+                }
+                4 -> { // Canceled
+                    backgroundColorRes = R.color.status_canceled_bg
+                    textColorRes = R.color.status_canceled_text
+                }
+                5 -> { // Refunded
+                    backgroundColorRes = R.color.status_refunded_bg
+                    textColorRes = R.color.status_refunded_text
+                }
+                6 -> { //Failed
+                    backgroundColorRes = R.color.status_failed_bg
+                    textColorRes = R.color.status_failed_text
+                }
+            }
+            // Apply the background tint and text color
+            // Make sure your binding.orderStatusTxt has a background drawable that supports tinting
+            // (e.g., a <shape> drawable). If not, you might need to set a background resource
+            // that is a shape drawable.
+            // Example: binding.orderStatusTxt.setBackgroundResource(R.drawable.status_badge_background)
+            // where status_badge_background is a simple shape drawable.
+            binding.orderStatusTxt.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, backgroundColorRes))
+            binding.orderStatusTxt.setTextColor(ContextCompat.getColor(context, textColorRes))
+        }
+    } // End of OrderViewHolder
+
+    // Helper function to convert status code to readable text
+    // This should align with your EOrderStatus enum
+    // --- MODIFIED to accept Context and use string resources ---
+    private fun getOrderStatusText(status: Int?, context: android.content.Context): String {
+        return when (status) {
+            0 -> context.getString(R.string.status_pending)
+            1 -> context.getString(R.string.status_processing)
+            2 -> context.getString(R.string.status_delivering)
+            3 -> context.getString(R.string.status_completed)
+            4 -> context.getString(R.string.status_canceled)
+            5 -> context.getString(R.string.status_refunded)
+            6 -> context.getString(R.string.status_failed)
+            else -> context.getString(R.string.status_unknown)
+        }
     }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): OrderItemViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_order_product, parent, false)
-        return OrderItemViewHolder(view)
-    }
-
-    override fun onBindViewHolder(holder: OrderItemViewHolder, position: Int) {
-        val item = items[position]
-        holder.titleTxt.text = item.name
-        // Sử dụng NumberFormat để định dạng giá
-        val formatter = java.text.NumberFormat.getNumberInstance(Locale("vi", "VN"))
-        formatter.minimumFractionDigits = 0
-        formatter.maximumFractionDigits = 0
-        holder.priceTxt.text = "Giá: ${formatter.format(item.price)}$"
-        holder.quantityTxt.text = "Số lượng: ${item.stock}"
-        // Thêm placeholder cho Glide
-        Glide.with(holder.itemView.context)
-            .load(if (item.galleryImageUrls.isNotEmpty()) item.mainImageUrl else R.drawable.placeholder)
-            .into(holder.imageView)
-    }
-
-    override fun getItemCount(): Int = items.size
 }

@@ -110,4 +110,11 @@ class CategoryAdapter(private var items: MutableList<CategoryModel>) : // Use pr
         lastSelectedPosition = -1
         notifyDataSetChanged() // Or use DiffUtil for better performance with large lists
     }
+    fun updateData(newItems: List<CategoryModel>) {
+        items.clear()
+        items.addAll(newItems)
+        notifyDataSetChanged()
+    }
+
+    class ViewHolder(val binding: ViewholderCategoryBinding) : RecyclerView.ViewHolder(binding.root)
 }

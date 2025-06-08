@@ -61,6 +61,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
     implementation(libs.androidx.compose.material)
+    implementation(libs.androidx.media3.common.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -3,132 +3,127 @@ package com.example.banhangs.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Toast
+import androidx.activity.viewModels
+import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.banhangs.Adapter.OrderAdapter
-import com.example.banhangs.Helper.TinyDB
-import com.example.banhangs.Model.OrderModel
-import com.example.banhangs.Model.UserModel
+import com.example.banhangs.Model.OrderData // Use the new API model
+import com.example.banhangs.Model.UserData // Assuming this is your user model from login
+import com.example.banhangs.R
+import com.example.banhangs.ViewModel.MyOrderViewModel // Create this ViewModel
 import com.example.banhangs.databinding.ActivityMyOrderBinding
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import com.example.banhangs.Helper.SessionManager // Assuming you have this
 
 class MyOrderActivity : BaseActivity() {
     private lateinit var binding: ActivityMyOrderBinding
-    private lateinit var tinyDB: TinyDB
-    private val orders = mutableListOf<OrderModel>()
+    private val viewModel: MyOrderViewModel by viewModels()
+    private lateinit var orderAdapter: OrderAdapter
+    private lateinit var sessionManager: SessionManager
+    private val TAG = "MyOrderActivity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("MyOrderActivity", "onCreate started")
         binding = ActivityMyOrderBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        Log.d("MyOrderActivity", "Binding initialized: ${binding.backBtn != null}")
+        Log.d(TAG, "onCreate started")
 
-        tinyDB = TinyDB(this)
+        sessionManager = SessionManager(this)
 
-        // Kiểm tra trạng thái nút Back
-        binding.backBtn.post {
-            Log.d("MyOrderActivity", "Back button state: isShown=${binding.backBtn.isShown}, isEnabled=${binding.backBtn.isEnabled}, isClickable=${binding.backBtn.isClickable}")
-        }
-
-        // Xử lý nút Back
-        binding.backBtn.setOnClickListener {
-            Log.d("MyOrderActivity", "Back button clicked")
-            Toast.makeText(this, "Quay lại màn hình chính", Toast.LENGTH_SHORT).show()
-            try {
-                val intent = Intent(this, MainActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                startActivity(intent)
-                finish()
-                Log.d("MyOrderActivity", "Navigated to MainActivity")
-            } catch (e: Exception) {
-                Log.e("MyOrderActivity", "Error starting MainActivity: ${e.message}")
-                Toast.makeText(this, "Lỗi mở MainActivity: ${e.message}", Toast.LENGTH_LONG).show()
-            }
-        }
-
-        // Thêm sự kiện touch để debug
-        binding.backBtn.setOnTouchListener { _, event ->
-            Log.d("MyOrderActivity", "Back button touched: ${event.action}")
-            false // Cho phép sự kiện click tiếp tục
-        }
-
-        loadProfile()
-        loadOrders()
+        setupToolbar() // Replaces old backBtn logic
         initOrderList()
+        observeViewModel()
+
+        if (sessionManager.fetchAuthToken() == null) {
+            Toast.makeText(this, "Please log in to view orders.", Toast.LENGTH_LONG).show()
+            // Optionally redirect to LoginActivity
+            // startActivity(Intent(this, LoginActivity::class.java))
+            // finish()
+            binding.emptyOrdersText.text = "Please log in to view your orders."
+            binding.emptyOrdersText.visibility = View.VISIBLE
+            return
+        }
+
+        loadProfileDataFromSession()
+        viewModel.loadOrders()
+        Log.d(TAG, "Initial data load triggered")
     }
 
-    private fun loadProfile() {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val database = FirebaseDatabase.getInstance().reference
+    private fun setupToolbar() {
+        // Assuming your ActivityMyOrderBinding has a Toolbar with id 'toolbar'
+        // If not, you need to add <androidx.appcompat.widget.Toolbar android:id="@+id/toolbar" ... />
+        // to your activity_my_order.xml
+        setSupportActionBar(binding.toolbar) // Use the toolbar from binding
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayShowHomeEnabled(true)
+        supportActionBar?.title = "My Orders" // Or use a string resource R.string.my_orders
 
-        database.child("Users").child(userId)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val profileName = snapshot.child("profile_name").getValue(String::class.java)
-                        ?: tinyDB.getString("profile_name") ?: "Quang Huy"
-                    val address = snapshot.child("address").getValue(String::class.java)
-                        ?: tinyDB.getString("profile_address") ?: "Chưa cập nhật"
-                    val phone = snapshot.child("phone").getValue(String::class.java)
-                        ?: tinyDB.getString("profile_phone") ?: "Chưa cập nhật"
-
-                    val user = UserModel(
-                        name = profileName,
-                        address = address,
-                        phone = phone
-                    )
-
-                    binding.nameTxt.text = "Tên: ${user.name}"
-                    binding.addressTxt.text = "Địa chỉ: ${user.address}"
-                    binding.phoneTxt.text = "Số điện thoại: ${user.phone}"
-                    Log.d("MyOrderActivity", "Profile loaded: $user")
-
-                    if (user.address == "Chưa cập nhật" && user.phone == "Chưa cập nhật") {
-                        Toast.makeText(this@MyOrderActivity, "Vui lòng cập nhật địa chỉ và số điện thoại trong hồ sơ", Toast.LENGTH_SHORT).show()
-                    }
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    Log.e("MyOrderActivity", "Failed to load profile: ${error.message}")
-                    val profileName = tinyDB.getString("profile_name") ?: "Quang Huy"
-                    val address = tinyDB.getString("profile_address") ?: "Chưa cập nhật"
-                    val phone = tinyDB.getString("profile_phone") ?: "Chưa cập nhật"
-                    binding.nameTxt.text = "Tên: $profileName"
-                    binding.addressTxt.text = "Địa chỉ: $address"
-                    binding.phoneTxt.text = "Số điện thoại: $phone"
-                    Toast.makeText(this@MyOrderActivity, "Lỗi tải hồ sơ: ${error.message}", Toast.LENGTH_SHORT).show()
-                }
-            })
+        binding.toolbar.setNavigationOnClickListener {
+            // This will mimic the back button press
+            onBackPressedDispatcher.onBackPressed()
+        }
+        // The old binding.backBtn can be removed from the XML or hidden
+        binding.backBtn.visibility = View.GONE
     }
 
-    private fun loadOrders() {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val database = FirebaseDatabase.getInstance().reference
-        database.child("Users").child(userId).child("orders")
-            .addValueEventListener(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    orders.clear()
-                    for (orderSnapshot in snapshot.children) {
-                        val order = orderSnapshot.getValue(OrderModel::class.java)
-                        order?.let { orders.add(it) }
-                    }
-                    binding.orderRecyclerView.adapter?.notifyDataSetChanged()
-                    Log.d("MyOrderActivity", "Orders loaded: ${orders.size}")
-                }
 
-                override fun onCancelled(error: DatabaseError) {
-                    Log.e("MyOrderActivity", "Failed to load orders: ${error.message}")
-                    Toast.makeText(this@MyOrderActivity, "Lỗi tải đơn hàng!", Toast.LENGTH_SHORT).show()
-                }
-            })
+    private fun loadProfileDataFromSession() {
+        // Fetch user details stored during login by SessionManager
+        // This assumes SessionManager has methods to get individual fields or a UserData object
+        val userName = sessionManager.fetchUserFullName() ?: "N/A"
+        val userAddress = sessionManager.fetchUserAddress() ?: "Chưa cập nhật"
+        val userPhone = sessionManager.fetchUserPhoneNumber() ?: "Chưa cập nhật"
+
+        binding.nameTxt.text = "Tên: $userName"
+        binding.addressTxt.text = "Địa chỉ: $userAddress"
+        binding.phoneTxt.text = "Số điện thoại: $userPhone"
+        Log.d(TAG, "Profile loaded from SessionManager: Name=$userName, Address=$userAddress, Phone=$userPhone")
+
+        if (userAddress == "Chưa cập nhật" || userPhone == "Chưa cập nhật") {
+            Toast.makeText(this, "Vui lòng cập nhật địa chỉ và số điện thoại trong hồ sơ", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun initOrderList() {
-        binding.orderRecyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
-        binding.orderRecyclerView.adapter = OrderAdapter(orders)
+        orderAdapter = OrderAdapter(mutableListOf()) // Initialize with empty list
+        binding.orderRecyclerView.layoutManager = LinearLayoutManager(this)
+        binding.orderRecyclerView.adapter = orderAdapter
+        Log.d(TAG, "Order RecyclerView initialized")
     }
+
+    private fun observeViewModel() {
+        viewModel.isLoading.observe(this, Observer { isLoading ->
+            Log.d(TAG, "isLoading changed: $isLoading")
+        })
+
+        viewModel.errorMessage.observe(this, Observer { errorMessage ->
+            errorMessage?.let {
+                Toast.makeText(this, it, Toast.LENGTH_LONG).show()
+                binding.emptyOrdersText.text = it // Show error message in the empty text view
+                binding.emptyOrdersText.visibility = View.VISIBLE
+                binding.orderRecyclerView.visibility = View.GONE
+                Log.e(TAG, "Error observed: $it")
+            }
+        })
+
+        viewModel.orders.observe(this, Observer { orders ->
+            if (orders.isNullOrEmpty()) {
+                if (!viewModel.isLoading.value!! && viewModel.errorMessage.value == null) { // Only show if not loading and no error
+                    binding.emptyOrdersText.text = "You have no orders yet."
+                    binding.emptyOrdersText.visibility = View.VISIBLE
+                    binding.orderRecyclerView.visibility = View.GONE
+                    Log.d(TAG, "Orders list is empty or null")
+                }
+            } else {
+                orderAdapter.updateOrders(orders) // OrderAdapter needs an updateOrders method
+                binding.emptyOrdersText.visibility = View.GONE
+                binding.orderRecyclerView.visibility = View.VISIBLE
+                Log.d(TAG, "Orders updated in adapter: ${orders.size} orders")
+            }
+        })
+    }
+
+    // Make sure your activity_my_order.xml has a ProgressBar with id 'progressBar'
+    // and a TextView with id 'emptyOrdersText'
 }
