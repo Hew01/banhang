@@ -14,13 +14,13 @@ import androidx.activity.result.launch
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.banhangs.Helper.SessionManager
+import com.example.banhangs.Model.LoginApiResponse
 import com.example.banhangs.R
 import com.example.banhangs.Network.RetrofitClient // Your Retrofit client
 import com.example.banhangs.Model.LoginRequest
 import kotlinx.coroutines.launch
 import java.io.IOException
 
-class LoginActivity : AppCompatActivity() {
     class LoginActivity : AppCompatActivity() {
         private lateinit var edtlogin: EditText
         private lateinit var edtpass: EditText
@@ -68,6 +68,23 @@ class LoginActivity : AppCompatActivity() {
                 }
                 lifecycleScope.launch {
                     try {
+                        if (LoginApiResponse != null && LoginApiResponse.retCode == 0 && LoginApiResponse.data != null) {
+                            val token = LoginApiResponse.data.token
+                            val user = LoginApiResponse.data.user // Assuming user is your UserModel
+
+                            sessionManager.saveAuthToken(token)
+
+                            val userName = "${user.firstName ?: ""} ${user.lastName ?: ""}".trim()
+                            if (userName.isEmpty()) {
+                                // Fallback if names are not available, or use email/username
+                                sessionManager.saveUserDetails(
+                                    user.userId,
+                                    user.email ?: loginIdentifier
+                                )
+                            } else {
+                                sessionManager.saveUserDetails(user.userId, userName)
+                            }
+                        }
                         val loginRequest = LoginRequest(loginIdentifier, pass)
                         val response = apiService.login(loginRequest) // Assuming apiService.login() is your suspend function
 
@@ -80,19 +97,17 @@ class LoginActivity : AppCompatActivity() {
                                 val token = loginApiResponse.data.token
                                 val user = loginApiResponse.data.user
 
-                                // **USING SESSION MANAGER HERE**
                                 sessionManager.saveAuthToken(token)
 
-                                // Construct user name (example: first name + last name)
-                                // Adjust this based on what your UserData model provides
                                 val userName = "${user.firstName ?: ""} ${user.lastName ?: ""}".trim()
                                 if (userName.isEmpty()) {
-                                    // Fallback if names are not available, or use email/username
-                                    sessionManager.saveUserDetails(user.userId, user.email ?: loginIdentifier)
+                                    sessionManager.saveUserDetails(
+                                        user.userId,
+                                        user.email ?: loginIdentifier // Fallback to email or loginIdentifier
+                                    )
                                 } else {
                                     sessionManager.saveUserDetails(user.userId, userName)
                                 }
-                                // *****************************
 
                                 Toast.makeText(this@LoginActivity, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show()
                                 Log.i("LoginActivity", "Login successful. Token: $token, UserID: ${user.userId}")
@@ -133,5 +148,4 @@ class LoginActivity : AppCompatActivity() {
             }
         }
     }
-}
 

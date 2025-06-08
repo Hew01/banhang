@@ -70,7 +70,7 @@ class ListItemsActivity : BaseActivity() {
             }
             binding.progressBarList.visibility = View.GONE
         } else if (categoryId.isNotEmpty()) {
-            viewModel.loadFiltered(categoryId)
+            viewModel.loadItemsByCategoryId(categoryId)
         } else {
             Log.w(TAG, "No category ID or search query provided.")
             binding.categoryTxt.text = "Không có thông tin để tải sản phẩm"

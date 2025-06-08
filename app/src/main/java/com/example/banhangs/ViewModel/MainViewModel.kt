@@ -29,8 +29,8 @@ class MainViewModel : ViewModel() {
     val isLoading: LiveData<Boolean> = _isLoading
 
     private val _searchedItems =
-        MutableLiveData<List<ProductDetailsModel>>(emptyList()) // Initialize with emptyList
-    val searchedItems: LiveData<List<ProductDetailsModel>> = _searchedItems
+        MutableLiveData<List<ProductDetailsModel>?>(emptyList()) // Initialize with emptyList
+    val searchedItems: MutableLiveData<List<ProductDetailsModel>?> = _searchedItems
 
     private val _errorMessage = MutableLiveData<String?>() // For error messages
     val errorMessage: LiveData<String?> = _errorMessage
@@ -39,8 +39,8 @@ class MainViewModel : ViewModel() {
     val itemsByCategoryId: LiveData<List<ProductDetailsModel>> = _itemsByCategoryId
 
     private val _recommendedItems =
-        MutableLiveData<List<ProductDetailsModel>>() // If you don't have this already
-    val recommendedItems: LiveData<List<ProductDetailsModel>> =
+        MutableLiveData<List<ProductDetailsModel>?>() // If you don't have this already
+    val recommendedItems: MutableLiveData<List<ProductDetailsModel>?> =
         _recommendedItems // If you don't have this already
 
     private val _categories =
@@ -50,6 +50,8 @@ class MainViewModel : ViewModel() {
     // LiveData for Banners
     private val _banners = MutableLiveData<List<SliderModel>>()
     val banners: LiveData<List<SliderModel>> = _banners
+
+    private val TAG = "MainViewModel"
 
     fun loadItemsByCategoryId(categoryId: String) {
         if (categoryId.isBlank()) {
@@ -70,67 +72,49 @@ class MainViewModel : ViewModel() {
 
                 if (response.isSuccessful) {
                     val productsResponse: ProductsByCategoryResponse? = response.body()
-                    // Check your API's success indicator, e.g., retCode == 0 or a specific statusCode
-                    if (productsResponse?.data != null && (productsResponse.retCode == 0 || productsResponse.statusCode == 200 || productsResponse.statusCode == 0) ) {
-                        // Map ProductFromCategory to ProductDetailsModel
-                        // You need to define ProductDetailsModel or ensure ProductFromCategory is compatible
-                        // with what your ListItemsAdapter expects.
-                        // For this example, I'll assume ProductDetailsModel needs specific fields from ProductFromCategory.
-                        val productDetailsList = productsResponse.data.map { productFromApi ->
+                    if (productsResponse?.data != null && (productsResponse.retCode == 0 || productsResponse.statusCode == 200 || productsResponse.statusCode == 0)) {
+                        val mappedProducts = productsResponse.data.map { productFromApi ->
+                            // Map ProductFromCategory to your ProductDetailsModel
                             ProductDetailsModel(
-                                    productId = productFromApi.productId,
-                                    name = productFromApi.name,
-                                    mainImageUrl = productFromApi.mainImageUrl, // Keep as nullable if ProductDetailData allows
-                                    price = productFromApi.price ?: 0.0, // Provide a default if null, or ensure ProductDetailData's price is nullable
+                                productId = productFromApi.productId,
+                                name = productFromApi.name,
+                                mainImageUrl = productFromApi.mainImageUrl,
+                                price = productFromApi.price ?: 0.0, // Default if API sends null
+                                stock = productFromApi.stock,
+                                categoryName = productFromApi.categoryName,
+                                averageRating = productFromApi.averageRating,
+                                soldCount = productFromApi.soldCount,
+                                ratedCount = productFromApi.ratedCount,
 
-                                    // Fields from ProductFromCategory that are also in ProductDetailData
-                                    stock = productFromApi.stock,
-                                    categoryName = productFromApi.categoryName, // This is available
-                                    averageRating = productFromApi.averageRating,
-                                    soldCount = productFromApi.soldCount,
-                                    ratedCount = productFromApi.ratedCount,
-
-                                    // Fields in ProductDetailData but NOT in ProductFromCategory:
-                                    // Provide defaults or nulls.
-                                    // These would typically be fetched when viewing a single product's details.
-                                    shortDescription = null, // Or a default like "View details for more."
-                                    description = null,      // Or a default
-                                    galleryImageUrls = null, // Or emptyList()
-                                    salePrice = null,        // No sale info in ProductFromCategory
-                                    saleStart = null,
-                                    saleEnd = null,
-                                    categoryId = null,       // ProductFromCategory has categoryName, not ID directly.
-                                    // If you need categoryId here, you might need to fetch it separately
-                                    // or pass it down if it's the same ID used to filter.
-                                    // For now, let's assume it's the one used in the API call:
-                                    // categoryId = categoryId, // If 'categoryId' is the parameter to loadItemsByCategoryId
-
-                                    brandId = null,          // No brand info in ProductFromCategory
-                                    brandName = null,
-                                    isOnSale = false,        // Assume not on sale unless detail endpoint says so
-                                    isFeatured = false       // Assume not featured
-                                )
-                            }
-                        _itemsByCategoryId.value = productDetailsList
-                        Log.d(
-                            "MainViewModel",
-                            "Loaded ${productDetailsList.size} items for category $categoryId"
-                        )
+                                // Fields in ProductDetailsModel but NOT in ProductFromCategory
+                                // Provide defaults or nulls as appropriate for your UI.
+                                shortDescription = null, // Or "View details..."
+                                description = null,
+                                galleryImageUrls = emptyList(), // Default to empty list
+                                salePrice = null,
+                                saleStart = null,
+                                saleEnd = null,
+                                categoryId = categoryId, // Use the categoryId passed to the function
+                                brandId = null,
+                                brandName = null,
+                                isOnSale = false, // Assume false unless detail API says otherwise
+                                isFeatured = false
+                            )
+                        }
+                        _itemsByCategoryId.value = mappedProducts
+                        Log.i(TAG, "Successfully loaded ${mappedProducts.size} products for category: $categoryId")
                     } else {
-                        val errorMsg = "API error for category $categoryId: retCode=${productsResponse?.retCode}, statusCode=${productsResponse?.statusCode}, message=${productsResponse?.systemMessage ?: "Unknown API error"}"
+                        val errorMsg = "API error (categoryId: $categoryId): retCode=${productsResponse?.retCode}, statusCode=${productsResponse?.statusCode}, message=${productsResponse?.systemMessage ?: "Unknown API logic error"}"
                         _errorMessage.value = errorMsg
-                        _itemsByCategoryId.value = emptyList() // Clear on API logical error
-                        Log.e("MainViewModel", errorMsg)
+                        _itemsByCategoryId.value = emptyList()
+                        Log.e(TAG, errorMsg)
                     }
                 } else {
-                    val errorMsg =
-                        "Failed to load items for category $categoryId: ${response.code()} ${response.message()}"
+                    val errorBody = response.errorBody()?.string() ?: "No error body"
+                    val errorMsg = "Failed to fetch products (categoryId: $categoryId): HTTP ${response.code()} ${response.message()}. Error: $errorBody"
                     _errorMessage.value = errorMsg
-                    _itemsByCategoryId.value = emptyList() // Clear on HTTP error
-                    Log.e(
-                        "MainViewModel",
-                        "$errorMsg - Error Body: ${response.errorBody()?.string()}"
-                    )
+                    _itemsByCategoryId.value = emptyList()
+                    Log.e(TAG, errorMsg)
                 }
             } catch (e: IOException) { // For network connectivity issues
                 val errorMsg =
@@ -149,114 +133,59 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun searchProductsByName(query: String) { // Changed from searchItemsByName for consistency with your request
+    fun searchProductsByName(query: String) {
         if (query.isBlank()) {
-            _searchedItems.value = emptyList() // Use the LiveData for search results
-            _errorMessage.value = null // Clear previous search error
-            Log.d("MainViewModel", "Search query is blank, clearing results.")
+            _searchedItems.value = emptyList() // Clear results for blank query
+            _errorMessage.value = null
+            Log.d(TAG, "Search query is blank, clearing search results.")
             return
         }
 
         _isLoading.value = true
-        _errorMessage.value = null // Clear previous error
-        _searchedItems.value = emptyList() // Clear previous search results immediately
+        _errorMessage.value = null
 
         viewModelScope.launch {
             try {
-                Log.d("MainViewModel", "Searching for products with query: $query")
-                // Call the new method in your ApiService
-                val response = apiService.searchProductsByName(searchTerm = query)
+                Log.d(TAG, "Searching products with query: '$query'")
+                // Replace with your actual search API call and response model
+                // For demonstration, assuming it returns a similar structure to ProductsByCategoryResponse
+                val response = apiService.searchProductsByName(searchTerm = query) // Ensure this method exists and is correctly defined
 
                 if (response.isSuccessful) {
-                    val items: List<ProductDetailsModel>? = response.body()
-                    if (items != null) {
-                        _searchedItems.value = items ?: emptyList()
-                        Log.d("MainViewModel", "Found ${items.size} products for query: $query")
+                    val mappedProducts: List<ProductDetailsModel>? = response.body()
+
+                    if (mappedProducts != null) { // Check if the list itself is not null
+                        _searchedItems.value = mappedProducts
+                        Log.i(TAG, "Search successful for '$query', found ${mappedProducts.size} products.")
                     } else {
-                        _searchedItems.value = emptyList() // Handle null body case
-                        Log.d(
-                            "MainViewModel",
-                            "Search successful but response body was null for query: $query"
-                        )
+                        // This case means the API call was successful (2xx) but the body was unexpectedly null.
+                        val errorMsg = "Search API success but body was null for query '$query'"
+                        _errorMessage.value = errorMsg
+                        _searchedItems.value = emptyList()
+                        Log.e(TAG, errorMsg)
                     }
                 } else {
-                    val errorMsg = "Search failed: ${response.code()} ${response.message()}"
+                    val errorBody = response.errorBody()?.string() ?: "No error body"
+                    val errorMsg = "Search request failed for query '$query': HTTP ${response.code()} ${response.message()}. Error: $errorBody"
                     _errorMessage.value = errorMsg
-                    // _searchedItems.value is already emptyList() from above
-                    Log.e(
-                        "MainViewModel",
-                        "$errorMsg - Error Body: ${response.errorBody()?.string()}"
-                    )
+                    _searchedItems.value = emptyList()
+                    Log.e(TAG, errorMsg)
                 }
-            } catch (e: IOException) { // For network connectivity issues
-                val errorMsg = "Network error during search: ${e.message}"
+            } catch (e: IOException) {
+                val errorMsg = "Network error during search for '$query': ${e.message}"
                 _errorMessage.value = errorMsg
-                // _searchedItems.value is already emptyList()
-                Log.e("MainViewModel", errorMsg, e)
-            } catch (e: Exception) { // For other issues like JSON parsing or unexpected errors
-                val errorMsg = "Error during search: ${e.message}"
+                _searchedItems.value = emptyList()
+                Log.e(TAG, errorMsg, e)
+            } catch (e: Exception) {
+                val errorMsg = "Unexpected error during search for '$query': ${e.message}"
                 _errorMessage.value = errorMsg
-                // _searchedItems.value is already emptyList()
-                Log.e("MainViewModel", errorMsg, e)
+                _searchedItems.value = emptyList()
+                Log.e(TAG, errorMsg, e)
             } finally {
                 _isLoading.value = false
             }
         }
-
-        fun loadItemsByCategoryId(categoryId: String) { // Renamed from loadFiltered
-            if (categoryId.isBlank()) {
-                _errorMessage.value = "Category ID cannot be blank."
-                _itemsByCategoryId.value = emptyList() // Clear previous results
-                Log.w("MainViewModel", "loadItemsByCategoryId called with blank categoryId.")
-                return
-            }
-
-            _isLoading.value = true
-            _errorMessage.value = null
-            // _itemsByCategoryId.value = emptyList() // Optionally clear immediately
-
-            viewModelScope.launch {
-                try {
-                    Log.d("MainViewModel", "Loading items for category ID: $categoryId")
-                    // Using the @Path version from ApiService example:
-                    val response = apiService.getProductsByCategoryId(categoryId = categoryId)
-                    // If using the @Query version, it would be:
-                    // val response = apiService.getItemsByCategoryIdQuery(categoryId = categoryId)
-
-                    if (response.isSuccessful) {
-                        val items = response.body()
-                        _itemsByCategoryId.value =
-                            (items ?: emptyList()) as List<ProductDetailsModel>? // Post empty list if body is null
-                        Log.d(
-                            "MainViewModel",
-                            "Loaded ${items?.size ?: 0} items for category $categoryId"
-                        )
-                    } else {
-                        val errorMsg =
-                            "Failed to load items for category $categoryId: ${response.code()} ${response.message()}"
-                        _errorMessage.value = errorMsg
-                        _itemsByCategoryId.value = emptyList() // Clear on error
-                        Log.e(
-                            "MainViewModel",
-                            "$errorMsg - Error Body: ${response.errorBody()?.string()}"
-                        )
-                    }
-                } catch (e: IOException) {
-                    val errorMsg =
-                        "Network error loading items for category $categoryId: ${e.message}"
-                    _errorMessage.value = errorMsg
-                    _itemsByCategoryId.value = emptyList()
-                    Log.e("MainViewModel", errorMsg, e)
-                } catch (e: Exception) {
-                    val errorMsg = "Error loading items for category $categoryId: ${e.message}"
-                    _errorMessage.value = errorMsg
-                    _itemsByCategoryId.value = emptyList()
-                    Log.e("MainViewModel", errorMsg, e)
-                } finally {
-                    _isLoading.value = false
-                }
-            }
-        }
+    }
 
         fun loadRecommendedItems() { // Renamed from loadRecommended
             _isLoading.value = true
@@ -265,44 +194,48 @@ class MainViewModel : ViewModel() {
 
             viewModelScope.launch {
                 try {
-                    Log.d("MainViewModel", "Loading recommended items.")
-                    // Using the direct endpoint version from ApiService example:
-                    val response = apiService.getRecommendedItems()
-                    // If using the query parameter version (e.g., getItemsFiltered(isRecommended = true)):
-                    // val response = apiService.getItemsFiltered(isRecommended = true)
+                    Log.d(TAG, "Fetching recommended products.")
+                    val response = apiService.getRecommendedItems() // This returns Response<List<ProductDetailsModel>>
 
                     if (response.isSuccessful) {
-                        val items = response.body()
-                        _recommendedItems.value =
-                            items ?: emptyList() // Post empty list if body is null
-                        Log.d("MainViewModel", "Loaded ${items?.size ?: 0} recommended items.")
+                        // DIRECTLY GET THE LIST OF ProductDetailsModel
+                        val mappedProducts: List<ProductDetailsModel>? = response.body()
+
+                        if (mappedProducts != null) { // Check if the list itself is not null
+                            _recommendedItems.value = mappedProducts
+                            Log.i(TAG, "Successfully loaded ${mappedProducts.size} recommended products.")
+                        } else {
+                            // API call was successful (2xx) but the body was unexpectedly null.
+                            val errorMsg = "Recommended items API success but body was null."
+                            _errorMessage.value = errorMsg
+                            _recommendedItems.value = emptyList()
+                            Log.e(TAG, errorMsg)
+                        }
                     } else {
-                        val errorMsg =
-                            "Failed to load recommended items: ${response.code()} ${response.message()}"
+                        val errorBody = response.errorBody()?.string() ?: "No error body"
+                        val errorMsg = "Failed to fetch recommended items: HTTP ${response.code()} ${response.message()}. Error: $errorBody"
                         _errorMessage.value = errorMsg
-                        _recommendedItems.value = emptyList() // Clear on error
-                        Log.e(
-                            "MainViewModel",
-                            "$errorMsg - Error Body: ${response.errorBody()?.string()}"
-                        )
+                        _recommendedItems.value = emptyList()
+                        Log.e(TAG, errorMsg)
                     }
                 } catch (e: IOException) {
-                    val errorMsg = "Network error loading recommended items: ${e.message}"
+                    val errorMsg = "Network error fetching recommended items: ${e.message}"
                     _errorMessage.value = errorMsg
                     _recommendedItems.value = emptyList()
-                    Log.e("MainViewModel", errorMsg, e)
+                    Log.e(TAG, errorMsg, e)
                 } catch (e: Exception) {
-                    val errorMsg = "Error loading recommended items: ${e.message}"
+                    val errorMsg = "Unexpected error fetching recommended items: ${e.message}"
                     _errorMessage.value = errorMsg
                     _recommendedItems.value = emptyList()
-                    Log.e("MainViewModel", errorMsg, e)
+                    Log.e(TAG, errorMsg, e)
                 } finally {
                     _isLoading.value = false
                 }
             }
         }
 
-        fun loadCategories() { // Renamed from loadCategory for consistency
+
+    fun loadCategories() { // Renamed from loadCategory for consistency
             _isLoading.value = true
             _errorMessage.value = null // Clear previous error
             viewModelScope.launch {
@@ -378,4 +311,4 @@ class MainViewModel : ViewModel() {
             }
         }
     }
-}
+

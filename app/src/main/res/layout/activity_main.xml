@@ -53,7 +53,7 @@
                     android:layout_height="wrap_content"
                     app:srcCompat="@drawable/search_icon" />
 
-                <SearchView
+                <androidx.appcompat.widget.SearchView
                     android:id="@+id/searchView"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
