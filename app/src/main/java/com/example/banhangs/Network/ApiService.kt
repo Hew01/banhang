@@ -4,6 +4,7 @@ package com.example.banhangs.Network
 import com.example.banhangs.Model.AddToCartRequest
 import com.example.banhangs.Model.ApiCommentModel
 import com.example.banhangs.Model.CartApiResponse
+import com.example.banhangs.Model.CategoriesApiResponse
 import com.example.banhangs.Model.CategoryModel
 import com.example.banhangs.Model.CommentModel
 import com.example.banhangs.Model.CommentsListApiResponse
@@ -59,7 +60,7 @@ interface ApiService {
     suspend fun getRecommendedItems(): Response<List<ProductDetailsModel>>
 
     @GET("api/categories") // << YOUR ACTUAL ENDPOINT FOR CATEGORIES
-    suspend fun getCategories(): Response<List<CategoryModel>>
+    suspend fun getCategories(): Response<CategoriesApiResponse>
 
     @GET("api/Products/category/{categoryId}") // Corrected endpoint
     suspend fun getProductsByCategoryId(

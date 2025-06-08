@@ -132,7 +132,7 @@ data class CategoryData(
     @SerializedName("slug") val slug: String?,
     @SerializedName("iconImageUrl") val iconImageUrl: String?
 ) : Parcelable
-typealias CategoriesApiResponse = ApiResponse<List<CategoryData>>
+typealias CategoriesApiResponse = ApiResponse<List<CategoryModel>>
 
 data class ProductFromCategory(
     @SerializedName("productId") val productId: String,

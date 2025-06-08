@@ -90,8 +90,8 @@ class CategoryAdapter(private var items: MutableList<CategoryModel>) : // Use pr
                     val intent = Intent(context, ListItemsActivity::class.java).apply {
                         // Pass category ID and title to the ListItemsActivity
                         // Ensure ListItemsActivity expects "categoryId" and "categoryTitle"
-                        putExtra("categoryId", currentItem.categoryId)
-                        putExtra("categoryTitle", currentItem.name)
+                        putExtra(ListItemsActivity.EXTRA_CATEGORY_ID, currentItem.categoryId)
+                        putExtra(ListItemsActivity.EXTRA_CATEGORY_TITLE, currentItem.name)
                     }
                     ContextCompat.startActivity(context, intent, null)
                 }

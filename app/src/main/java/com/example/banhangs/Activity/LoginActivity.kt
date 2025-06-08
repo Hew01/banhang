@@ -61,7 +61,7 @@ import java.io.IOException
                 if (loginIdentifier.isEmpty() || pass.isEmpty()) {
                     Toast.makeText(
                         this,
-                        "Vui lòng nhập email/tên đăng nhập và mật khẩu",
+                        "Vui lòng nhập email và mật khẩu",
                         Toast.LENGTH_SHORT
                     ).show()
 
@@ -76,7 +76,7 @@ import java.io.IOException
                             val loginApiResponse = response.body() // This is your LoginApiResponse INSTANCE
 
                             // NOW, check the properties of the 'loginApiResponse' INSTANCE
-                            if (loginApiResponse != null && loginApiResponse.retCode == 0 && loginApiResponse.data != null) {
+                            if (loginApiResponse != null && (loginApiResponse.retCode == 0 || loginApiResponse.retCode == 3) && loginApiResponse.data != null) {
                                 val token = loginApiResponse.data.token
                                 val userFromApi = loginApiResponse.data.user // This is your UserData object from the API
 

@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.banhangs.Model.CategoriesApiResponse
 import com.example.banhangs.Model.CategoryModel
 import com.example.banhangs.Model.ProductDetailsModel
 import com.example.banhangs.Model.ProductsByCategoryResponse
@@ -13,6 +14,7 @@ import com.example.banhangs.Network.RetrofitClient
 import com.example.banhangs.Network.ApiResponse // Ensure this matches your project
 import com.example.banhangs.Model.ProductDetailData // Ensure this matches your project
 import kotlinx.coroutines.launch
+import retrofit2.Response
 import java.io.IOException
 
 class MainViewModel : ViewModel() {
@@ -37,11 +39,12 @@ class MainViewModel : ViewModel() {
     // --- Corrected LiveData exposure for recommendedItems ---
     // This is likely related to the line 155 error context
     private val _recommendedItems = MutableLiveData<List<ProductDetailsModel>?>(emptyList())
-    val recommendedItems: LiveData<List<ProductDetailsModel>?> = _recommendedItems // Expose LiveData
+    val recommendedItems: LiveData<List<ProductDetailsModel>?> =
+        _recommendedItems // Expose LiveData
 
 
-    private val _categories = MutableLiveData<List<CategoryModel>>()
-    val categories: LiveData<List<CategoryModel>> = _categories
+    private val _categories = MutableLiveData<List<CategoryModel>?>()
+    val categories: MutableLiveData<List<CategoryModel>?> = _categories
 
     private val _banners = MutableLiveData<List<SliderModel>>()
     val banners: LiveData<List<SliderModel>> = _banners
@@ -90,16 +93,21 @@ class MainViewModel : ViewModel() {
                             )
                         }
                         _itemsByCategoryId.value = mappedProducts
-                        Log.i(TAG, "Successfully loaded ${mappedProducts.size} products for category: $categoryId")
+                        Log.i(
+                            TAG,
+                            "Successfully loaded ${mappedProducts.size} products for category: $categoryId"
+                        )
                     } else {
-                        val errorMsg = "API error (categoryId: $categoryId): retCode=${productsResponse?.retCode}, statusCode=${productsResponse?.statusCode}, message=${productsResponse?.systemMessage ?: "Unknown API logic error"}"
+                        val errorMsg =
+                            "API error (categoryId: $categoryId): retCode=${productsResponse?.retCode}, statusCode=${productsResponse?.statusCode}, message=${productsResponse?.systemMessage ?: "Unknown API logic error"}"
                         _errorMessage.value = errorMsg
                         _itemsByCategoryId.value = emptyList()
                         Log.e(TAG, errorMsg)
                     }
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "No error body"
-                    val errorMsg = "Failed to fetch products (categoryId: $categoryId): HTTP ${response.code()} ${response.message()}. Error: $errorBody"
+                    val errorMsg =
+                        "Failed to fetch products (categoryId: $categoryId): HTTP ${response.code()} ${response.message()}. Error: $errorBody"
                     _errorMessage.value = errorMsg
                     _itemsByCategoryId.value = emptyList()
                     Log.e(TAG, errorMsg)
@@ -168,12 +176,18 @@ class MainViewModel : ViewModel() {
                                     isFeatured = productData.isFeatured ?: false
                                 )
                             } else {
-                                Log.w(TAG, "Skipping item in search results: retCode=${apiResponseItem.retCode}, message=${apiResponseItem.systemMessage}")
+                                Log.w(
+                                    TAG,
+                                    "Skipping item in search results: retCode=${apiResponseItem.retCode}, message=${apiResponseItem.systemMessage}"
+                                )
                                 null
                             }
                         }
                         _searchedItems.value = products
-                        Log.i(TAG, "Search successful for '$query', found ${products.size} products.")
+                        Log.i(
+                            TAG,
+                            "Search successful for '$query', found ${products.size} products."
+                        )
                     } else {
                         val errorMsg = "Search API success but body was null for query '$query'"
                         _errorMessage.value = errorMsg
@@ -182,7 +196,8 @@ class MainViewModel : ViewModel() {
                     }
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "No error body"
-                    val errorMsg = "Search request failed for query '$query': HTTP ${response.code()} ${response.message()}. Error: $errorBody"
+                    val errorMsg =
+                        "Search request failed for query '$query': HTTP ${response.code()} ${response.message()}. Error: $errorBody"
                     _errorMessage.value = errorMsg
                     _searchedItems.value = emptyList()
                     Log.e(TAG, errorMsg)
@@ -219,7 +234,8 @@ class MainViewModel : ViewModel() {
                     val productList: List<ProductDetailsModel>? = response.body()
 
                     if (productList != null) {
-                        _recommendedItems.value = productList // Directly assign, no complex mapping needed
+                        _recommendedItems.value =
+                            productList // Directly assign, no complex mapping needed
                         Log.i(TAG, "Successfully loaded ${productList.size} recommended products.")
                     } else {
                         val errorMsg = "Recommended items API success but body was null."
@@ -229,7 +245,8 @@ class MainViewModel : ViewModel() {
                     }
                 } else {
                     val errorBody = response.errorBody()?.string() ?: "No error body"
-                    val errorMsg = "Failed to fetch recommended items: HTTP ${response.code()} ${response.message()}. Error: $errorBody"
+                    val errorMsg =
+                        "Failed to fetch recommended items: HTTP ${response.code()} ${response.message()}. Error: $errorBody"
                     _errorMessage.value = errorMsg
                     _recommendedItems.value = emptyList()
                     Log.e(TAG, errorMsg)
@@ -257,14 +274,24 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 Log.d(TAG, "Loading categories.")
-                val response = apiService.getCategories()
+                val response: Response<CategoriesApiResponse> =
+                    apiService.getCategories() // Use new response type
 
                 if (response.isSuccessful) {
-                    val categoryList = response.body()
-                    _categories.value = categoryList ?: emptyList()
-                    Log.d(TAG, "Loaded ${categoryList?.size ?: 0} categories.")
+                    val apiResponse = response.body()
+                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data != null) {
+                        _categories.value = apiResponse.data // Access the list via apiResponse.data
+                        Log.d(TAG, "Loaded ${apiResponse.data.size} categories.")
+                    } else {
+                        val errorMsg =
+                            "Failed to load categories: API reported error (retCode=${apiResponse?.retCode}) or data was null. Message: ${apiResponse?.systemMessage}"
+                        _errorMessage.value = errorMsg
+                        _categories.value = emptyList()
+                        Log.e(TAG, errorMsg)
+                    }
                 } else {
-                    val errorMsg = "Failed to load categories: ${response.code()} ${response.message()}"
+                    val errorMsg =
+                        "Failed to load categories: HTTP ${response.code()} ${response.message()}"
                     _errorMessage.value = errorMsg
                     _categories.value = emptyList()
                     Log.e(TAG, "$errorMsg - Error Body: ${response.errorBody()?.string()}")
@@ -274,8 +301,8 @@ class MainViewModel : ViewModel() {
                 _errorMessage.value = errorMsg
                 _categories.value = emptyList()
                 Log.e(TAG, errorMsg, e)
-            } catch (e: Exception) {
-                val errorMsg = "Error loading categories: ${e.message}"
+            } catch (e: Exception) { // Catch specific JsonSyntaxException or IllegalStateException if needed
+                val errorMsg = "Error parsing categories response: ${e.message}"
                 _errorMessage.value = errorMsg
                 _categories.value = emptyList()
                 Log.e(TAG, errorMsg, e)
@@ -284,7 +311,6 @@ class MainViewModel : ViewModel() {
             }
         }
     }
-
     fun loadBanners() {
         _isLoading.value = true
         _errorMessage.value = null
