@@ -113,6 +113,13 @@
                     android:textSize="14sp"
                     android:textStyle="bold" />
 
+                <TextView
+                    android:id="@+id/categoryNameTxt"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Đang tải..."
+                    android:textSize="16sp"/>
+
                 <ImageView
                     android:id="@+id/imageView5"
                     android:layout_width="wrap_content"

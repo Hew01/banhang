@@ -14,42 +14,29 @@ class ProductRepository(private val apiService: ApiService) {
      * Fetches the detailed information for a specific product.
      * @param productId The ID of the product to fetch.
      */
+    @OptIn(UnstableApi::class)
     suspend fun getProductDetails(productId: String): Result<ProductDetailsModel> {
-        return withContext(Dispatchers.IO) {
-            try {
-                // Assuming your ApiService has:
-                // suspend fun getProductDetails(@Path("id") productId: String): Response<ProductDetailsApiResponse>
-                // And ProductDetailsApiResponse is typealias ProductDetailsApiResponse = ApiResponse<ProductDetailData>
-                // And ProductDetailData is the DTO that needs mapping to ProductDetailsModel (domain model)
-
-                val response = apiService.getProductDetails(productId) // This should return Response<ApiResponse<ProductDetailData>>
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data != null) {
-                        // Here, apiResponse.data is ProductDetailData (DTO)
-                        // You need to map it to ProductDetailsModel (your domain/UI model)
-                        // For simplicity, if ProductDetailData and ProductDetailsModel are identical in structure
-                        // and ProductDetailsModel is what your API returns directly in `data`, this is fine.
-                        // However, typically you'd have a DTO from the API and map it.
-                        // Let's assume for now apiService.getProductDetails directly gives ProductDetailsModel
-                        // or that ProductDetailData is directly usable as ProductDetailsModel.
-                        // If they are different, you'd do:
-                        // val productDto = apiResponse.data
-                        // Result.success(productDto.toDomainModel()) // Assuming an extension function
-                        Result.success(apiResponse.data) // If ProductDetailsModel is directly in ApiResponse.data
-                    } else {
-                        val errorMessage = "Failed to get product details: API Error - RetCode: ${apiResponse?.retCode}, Message: ${apiResponse?.systemMessage ?: response.message()}"
-                        Result.failure(Exception(errorMessage))
-                    }
+        return try {
+            val response = apiService.getProductDetails(productId)
+            if (response.isSuccessful) {
+                val apiResponse = response.body()
+                if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data != null) {
+                    Result.success(apiResponse.data) // apiResponse.data is ProductDetailsModel
                 } else {
-                    Result.failure(Exception("Failed to get product details: Network Error - Code: ${response.code()}, Message: ${response.message()}"))
+                    val errorMsg = "API error: ${apiResponse?.systemMessage ?: response.message()} (RetCode: ${apiResponse?.retCode})"
+                    Log.e("ProductRepository", "getProductDetails failed: $errorMsg")
+                    Result.failure(Exception(errorMsg))
                 }
-            } catch (e: Exception) {
-                Result.failure(Exception("Failed to get product details: Exception - ${e.message}", e))
-            } as Result<ProductDetailsModel>
+            } else {
+                val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                Log.e("ProductRepository", "getProductDetails network error: Code=${response.code()}, Message=${response.message()}, Body=$errorBody")
+                Result.failure(Exception("Network error: ${response.message()} (Code: ${response.code()})"))
+            }
+        } catch (e: Exception) {
+            Log.e("ProductRepository", "Exception in getProductDetails for ID $productId: ${e.message}", e)
+            Result.failure(Exception("Exception fetching product details: ${e.message}", e))
         }
     }
-
     /**
      * Fetches a list of products belonging to a specific category.
      * @param categoryId The ID of the category.

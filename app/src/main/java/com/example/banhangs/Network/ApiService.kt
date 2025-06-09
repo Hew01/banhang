@@ -41,7 +41,7 @@ interface ApiService {
     suspend fun register(@Body registerRequest: RegisterRequest): Response<RegisterApiResponse>
 
     @GET("api/products/{id}") // Or your actual path, e.g., "api/Product/GetProductDetails"
-    suspend fun getProductDetails(@Path("id") productId: String): Response<ProductDetailsApiResponse>
+    suspend fun getProductDetails(@Path("id") productId: String): Response<ApiResponse<ProductDetailsModel>>
     // Where ProductDetailsApiResponse is:
     // typealias ProductDetailsApiResponse = ApiResponse<ProductDetailData>
     // And ProductDetailData is the DTO class from your API.

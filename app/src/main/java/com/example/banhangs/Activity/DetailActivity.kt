@@ -28,7 +28,7 @@ class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common 
 
     private lateinit var binding: ActivityDetailBinding
     private lateinit var item: ProductDetailsModel // This is the product being displayed
-    private lateinit var itemId: String // Product ID, ensure this is correctly passed and retrieved
+    private lateinit var currentItemId: String // Product ID, ensure this is correctly passed and retrieved
 
     // Lazily initialize repositories (or use Hilt/Koin for DI)
     private val apiService: ApiService by lazy { RetrofitClient.instance } // Example: Get ApiService instance
@@ -36,8 +36,13 @@ class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common 
     private val productRepository by lazy { ProductRepository(apiService) }
 
     private val viewModel: DetailViewModel by viewModels {
-        DetailViewModelFactory(cartRepository, productRepository, itemId)
-    }
+        if (!::currentItemId.isInitialized || currentItemId.isBlank()) {
+            Log.e("DetailActivity", "ViewModelFactory: currentItemId not initialized!")
+        DetailViewModelFactory(cartRepository, productRepository, "INVALID_ID_FALLBACK")
+    } else {
+        DetailViewModelFactory(cartRepository, productRepository, currentItemId)
+    }}
+
 
     private lateinit var commentAdapter: CommentAdapter // Needs to be updated for ApiCommentModel
     private var numberOrder = 1 // For quantity to add to cart
@@ -47,16 +52,24 @@ class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common 
         binding = ActivityDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        if (!::item.isInitialized || itemId.isBlank()) { // Basic check
-            handleInvalidState()
-            return
+        val receivedItem = intent.getParcelableExtra<ProductDetailsModel>("object")
+        val receivedItemIdString = intent.getStringExtra("itemKey")
+
+        if (receivedItem == null || receivedItemIdString.isNullOrBlank()) {
+            Log.e("DetailActivity", "Product object or itemKey is null or blank from intent.")
+            handleInvalidState("Error: Product data missing from intent.")
+            return // Exit early
         }
+
+        item = receivedItem
+        currentItemId = receivedItemIdString
+        Log.d("DetailActivity", "Received item: ${item.name}, itemId: $currentItemId")
 
         // Pass the initially loaded item to the ViewModel
         // This assumes 'item' is the full ProductDetailsModel.
         // If 'item' is a summary and 'itemId' is used to fetch full details,
         // then the ViewModel would handle fetching product details.
-        viewModel.setInitialProductDetails(item)
+        viewModel.setInitialProductData(item)
 
 
         setupUI()
@@ -67,7 +80,7 @@ class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common 
         // viewModel.loadComments() // Already called in ViewModel or triggered by product ID availability
     }
 
-    private fun handleInvalidState() {
+    private fun handleInvalidState(message: String) {
         Toast.makeText(this, "Error: Product data missing.", Toast.LENGTH_LONG).show()
         Log.e("DetailActivity", "Item or ItemId not properly initialized.")
         finish() // Exit if essential data is missing
@@ -81,21 +94,6 @@ class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common 
     }
 
     private fun setupUI() {
-        // Get product details from intent (as before)
-        // Ensure 'object' key matches what you use in Intent
-        val receivedItem = intent.getParcelableExtra<ProductDetailsModel>("object")
-        val receivedItemId = intent.getStringExtra("itemKey")
-
-        if (receivedItem == null || receivedItemId == null) {
-            Log.e("DetailActivity", "Product object or itemKey is null from intent.")
-            handleInvalidState()
-            return
-        }
-        item = receivedItem
-        itemId = receivedItemId
-        Log.d("DetailActivity", "itemId from intent: $itemId")
-
-
         binding.titleTxt.text = item.name // Assuming 'name' from ProductDetailsModel
         binding.derscriptionTxt.text = item.description
         binding.priceTxt.text = "$${item.price}"
@@ -161,6 +159,66 @@ class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common 
             // isNestedScrollingEnabled = false // Consider if inside a ScrollView and needs to expand
         }
     }
+    private fun updateProductUI(product: ProductDetailsModel?) {
+        product?.let { currentProduct ->
+            Log.d("DetailActivity", "Updating UI with product: ${currentProduct.name}")
+            binding.titleTxt.text = currentProduct.name
+            binding.derscriptionTxt.text = currentProduct.description ?: "No description."
+            binding.priceTxt.text = "$${currentProduct.price}"
+            binding.raitingTxt.text = "${currentProduct.averageRating ?: 0.0} Rating"
+
+            // SET THE CATEGORY NAME HERE
+            if (!currentProduct.categoryName.isNullOrBlank()) {
+                binding.categoryNameTxt.text = currentProduct.categoryName
+                binding.categoryNameTxt.visibility = View.VISIBLE // Make sure it's visible
+                // If you have a LinearLayout wrapper for label + value, make that visible
+            } else {
+                binding.categoryNameTxt.text = "N/A" // Or hide it
+                // binding.categoryNameTxt.visibility = View.GONE
+                // Or hide the parent LinearLayout if you have one for label + value
+            }
+
+            // ... (rest of your image loading and other UI updates) ...
+
+            val picList = ArrayList<String>()
+            currentProduct.galleryImageUrls?.let { picList.addAll(it) }
+
+            if (picList.isNotEmpty()) {
+                Glide.with(this).load(picList[0])
+                    .placeholder(R.drawable.ic_placeholder)
+                    .error(R.drawable.ic_error_placeholder)
+                    .into(binding.img)
+                binding.picList.adapter = PicAdapter(picList) { selectedImageUrl ->
+                    Glide.with(this).load(selectedImageUrl)
+                        .placeholder(R.drawable.ic_placeholder)
+                        .error(R.drawable.ic_error_placeholder)
+                        .into(binding.img)
+                }
+                binding.picList.visibility = View.VISIBLE
+            } else if (!currentProduct.mainImageUrl.isNullOrEmpty()) {
+                Glide.with(this).load(currentProduct.mainImageUrl)
+                    .placeholder(R.drawable.ic_placeholder)
+                    .error(R.drawable.ic_error_placeholder)
+                    .into(binding.img)
+                binding.picList.visibility = View.GONE // Hide picList if only main image
+            } else {
+                binding.img.setImageResource(R.drawable.ic_placeholder) // Placeholder if no images
+                binding.picList.visibility = View.GONE
+            }
+            binding.derscriptionTxt.visibility = if (currentProduct.description.isNullOrBlank()) View.GONE else View.VISIBLE
+
+        } ?: run {
+            Log.d("DetailActivity", "Product details are null, cannot update UI fully.")
+            // Potentially clear or hide fields if product is null
+            binding.titleTxt.text = "Error"
+            binding.derscriptionTxt.text = "Could not load product details."
+            binding.priceTxt.text = ""
+            binding.raitingTxt.text = ""
+            binding.categoryNameTxt.text = "" // Clear category too
+            binding.img.setImageResource(R.drawable.ic_error_placeholder)
+        }
+    }
+
 
     private fun observeViewModel() {
         viewModel.productDetails.observe(this) { product ->
@@ -187,10 +245,20 @@ class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common 
             }
         }
 
-        viewModel.isLoading.observe(this) { isLoading ->
+        viewModel.isLoadingComments.observe(this) { isLoadingComments ->
+            // Handle loading state for comments
+            // Example: binding.commentsProgressBar.visibility = if (isLoadingComments) View.VISIBLE else View.GONE
+            val isProductLoading = viewModel.isLoadingProduct.value ?: false
+            binding.addToCartBtn.isEnabled = !isLoadingComments && !isProductLoading
+            binding.submitCommentBtn.isEnabled = !isLoadingComments && !isProductLoading
+        }
+
+
+        viewModel.isLoadingProduct.observe(this) { isLoadingProduct ->
             // You might want to disable buttons during loading
-            binding.addToCartBtn.isEnabled = !isLoading
-            binding.submitCommentBtn.isEnabled = !isLoading
+            val isCommentsLoading = viewModel.isLoadingComments.value ?: false
+            binding.addToCartBtn.isEnabled = !isLoadingProduct && !isCommentsLoading
+            binding.submitCommentBtn.isEnabled = !isLoadingProduct && !isCommentsLoading
         }
 
         viewModel.error.observe(this) { errorMessage ->
