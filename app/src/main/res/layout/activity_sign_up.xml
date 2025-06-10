@@ -8,17 +8,18 @@
     tools:context=".Activity.SignUpActivity"
     android:orientation="vertical"
     android:background="@drawable/phonebg"
-    android:gravity="center"
-    >
+    android:gravity="center">
 
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="30dp"
         app:cardCornerRadius="30dp"
-        app:cardElevation="20dp"
+        app:cardElevation="20dp">
 
-        >
+        <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -26,8 +27,7 @@
             android:orientation="vertical"
             android:layout_gravity="center_horizontal"
             android:padding="24dp"
-            android:background="@drawable/custom_edittext"
-            >
+            android:background="@drawable/custom_edittext">
 
             <TextView
                 android:layout_width="match_parent"
@@ -36,74 +36,129 @@
                 android:textSize="36sp"
                 android:textAlignment="center"
                 android:textStyle="bold"
-                android:textColor="@color/lavender"
-                />
+                android:textColor="@color/lavender" />
 
+            <!-- Added First Name -->
             <EditText
+                android:id="@+id/edtsignup_first_name"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
-                android:id="@+id/edtsignup_email"
                 android:background="@drawable/custom_edittext"
-                android:layout_marginTop="40dp"
-                android:padding="8dp"
-                android:hint="Email"
-                android:drawableLeft="@drawable/baseline_account_circle_24"
-                android:drawablePadding="8dp"
-                android:textColor="@color/black"
-                android:maxLines="1"
+                android:layout_marginTop="20dp"
+            android:padding="8dp"
+            android:hint="First Name"
+            android:drawableLeft="@drawable/baseline_person_outline_24"
+            android:drawablePadding="8dp"
+            android:textColor="@color/black"
+            android:inputType="textPersonName"
+            android:maxLines="1" />
 
-                />
-
+            <!-- Added Last Name -->
             <EditText
+                android:id="@+id/edtsignup_last_name"
                 android:layout_width="match_parent"
                 android:layout_height="50dp"
-                android:id="@+id/edtpassword"
                 android:background="@drawable/custom_edittext"
                 android:layout_marginTop="15dp"
                 android:padding="8dp"
-                android:hint="Password"
+                android:hint="Last Name"
+                android:drawableLeft="@drawable/baseline_person_outline_24"
+            android:drawablePadding="8dp"
+            android:textColor="@color/black"
+            android:inputType="textPersonName"
+            android:maxLines="1" />
+
+            <EditText
+                android:id="@+id/edtsignup_email"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:background="@drawable/custom_edittext"
+                android:layout_marginTop="15dp"
+            android:padding="8dp"
+            android:hint="Email"
+            android:drawableLeft="@drawable/baseline_account_circle_24"
+            android:drawablePadding="8dp"
+            android:textColor="@color/black"
+            android:inputType="textEmailAddress"
+            android:maxLines="1" />
+
+            <EditText
+                android:id="@+id/edtpassword_signup"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="@drawable/custom_edittext"
+            android:layout_marginTop="15dp"
+            android:padding="8dp"
+            android:hint="Password"
+            android:drawableLeft="@drawable/icon_lock"
+            android:drawablePadding="8dp"
+            android:textColor="@color/black"
+            android:inputType="textPassword"
+            android:maxLines="1" />
+
+            <!-- Added Confirm Password -->
+            <EditText
+                android:id="@+id/edt_confirm_password"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:background="@drawable/custom_edittext"
+                android:layout_marginTop="15dp"
+                android:padding="8dp"
+                android:hint="Confirm Password"
                 android:drawableLeft="@drawable/icon_lock"
-                android:drawablePadding="8dp"
-                android:textColor="@color/black"
-                android:maxLines="1"
-
-                />
-
-
-
+            android:drawablePadding="8dp"
+            android:textColor="@color/black"
+            android:inputType="textPassword"
+            android:maxLines="1" />
 
             <Button
+                android:id="@+id/btn_SignUp"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:text="SIGN UP"
-                android:id="@+id/btn_SignUp"
                 android:textSize="18sp"
                 android:layout_marginTop="30dp"
-                android:backgroundTint="@color/lavender"
-                />
-
+                android:backgroundTint="@color/lavender" />
 
             <TextView
+                android:id="@+id/loginRedirectText_signup"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/loginRedirectText_signup"
                 android:layout_gravity="center"
                 android:padding="8dp"
                 android:layout_marginTop="15dp"
-                android:text="Login"
-                android:textColor="@color/lavender"
-                />
+                android:text="Already have an account? Login"
+                android:textColor="@color/lavender" />
 
         </LinearLayout>
 
+        <ProgressBar
+            android:id="@+id/progressBar_signup"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:visibility="gone"
+            tools:visibility="visible"/> <!-- tools:visibility for preview -->
 
-    </androidx.cardview.widget.CardView>
+    </RelativeLayout>
+</androidx.cardview.widget.CardView>
 
-    <ImageButton
-        android:id="@+id/btn_Change"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:srcCompat="@drawable/baseline_arrow_circle_right_24"
-        />
+    <!-- This ImageButton seems to be for navigation, perhaps to Login.
+         If loginRedirectText_signup serves this purpose, you might not need this button,
+         or you can repurpose/style it.
+         For the refactored SignUpActivity, I used 'btnChangeToLogin' for this.
+         Let's assume loginRedirectText_signup handles the "go to login" action for now.
+         If this btn_Change is distinct, ensure its ID and functionality are handled
+         in SignUpActivity.kt.
+    -->
+<ImageButton
+android:id="@+id/btn_ChangeToLogin"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="10dp"
+    android:background="?attr/selectableItemBackgroundBorderless"
+    app:srcCompat="@drawable/baseline_arrow_circle_right_24"
+    android:contentDescription="Go to Login page"/>
 
-</LinearLayout>
+    </LinearLayout>

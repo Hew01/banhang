@@ -125,18 +125,4 @@ class ProfileRepository(
         }
     }
 
-    suspend fun logoutUser() {
-        userPreferencesRepository.clearUserSession()
-        Log.d(TAG, "User session cleared locally.")
-        // Optional: Server-side logout call
-        // val token = userPreferencesRepository.getUserToken() // Get token again if needed for API call
-        // if (!token.isNullOrBlank() && apiService has a logout method) {
-        //     try {
-        //         // val response = apiService.logout("Bearer $token")
-        //         // Log.d(TAG, "Server-side logout requested. Response: ${response.isSuccessful}")
-        //     } catch (e: Exception) {
-        //         Log.e(TAG, "Failed to request server-side logout", e)
-        //     }
-        // }
-    }
 }

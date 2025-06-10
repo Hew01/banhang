@@ -5,10 +5,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
-import android.view.View
-import android.widget.Button
+import androidx.lifecycle.Observer
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope // Required for lifecycleScope
 import com.example.banhangs.Model.ChangePasswordRequest
 import com.example.banhangs.Model.UserData
@@ -17,7 +17,10 @@ import com.example.banhangs.Network.RetrofitClient
 import com.example.banhangs.R // Your R file
 import com.example.banhangs.Repository.ProfileRepository
 import com.example.banhangs.Repository.UserPreferencesRepository
+import com.example.banhangs.ViewModel.AuthViewModel
 import com.example.banhangs.databinding.ActivityProfileBinding
+import com.example.banhangs.Factory.AuthViewModelFactory
+import com.example.banhangs.Repository.AuthRepository
 import kotlinx.coroutines.launch // Required for launch
 import kotlin.text.ifEmpty
 import kotlin.text.isNullOrBlank
@@ -25,11 +28,14 @@ import kotlin.text.trim
 
 class ProfileActivity : BaseActivity() { // Assuming BaseActivity provides common setup
     private lateinit var binding: ActivityProfileBinding
-    // Remove TinyDB if it's no longer the primary storage for profile
-    // private lateinit var tinyDB: TinyDB
+    private val authViewModel: AuthViewModel by viewModels {
+        val localUserPrefsRepo = UserPreferencesRepository(applicationContext)
+        val apiService = RetrofitClient.instance // Get your ApiService instance
+        val authRepo = AuthRepository(apiService, localUserPrefsRepo)
 
-    // Firebase Auth is no longer used for profile data or main auth checks here
-    // private lateinit var auth: FirebaseAuth
+        // Now pass the created instances to the factory
+        AuthViewModelFactory(authRepo, localUserPrefsRepo) // Placeholder for your factory
+    }
 
     private lateinit var userPreferencesRepository: UserPreferencesRepository
     private lateinit var profileRepository: ProfileRepository
@@ -48,8 +54,6 @@ class ProfileActivity : BaseActivity() { // Assuming BaseActivity provides commo
         val apiService = RetrofitClient.instance // Your Retrofit instance
         profileRepository = ProfileRepository(apiService, userPreferencesRepository)
 
-        // tinyDB = TinyDB(this) // Keep if used for other non-profile things
-
         lifecycleScope.launch {
             val token = userPreferencesRepository.getUserToken() // Correct
             currentUserId = userPreferencesRepository.getUserId() // Correct
@@ -61,7 +65,6 @@ class ProfileActivity : BaseActivity() { // Assuming BaseActivity provides commo
             // Token exists, proceed to load profile from API
             loadProfileInfoFromApi()
         }
-
         setupClickListeners()
     }
 
@@ -224,7 +227,7 @@ class ProfileActivity : BaseActivity() { // Assuming BaseActivity provides commo
             .setMessage("Are you sure you want to logout?")
             .setPositiveButton("Logout") { dialog, _ ->
                 lifecycleScope.launch {
-                    profileRepository.logoutUser() // Clears local session
+                    authViewModel.logoutUser() // Clears local session
                     Toast.makeText(this@ProfileActivity, "Logged out", Toast.LENGTH_SHORT).show()
                     redirectToLogin()
                 }

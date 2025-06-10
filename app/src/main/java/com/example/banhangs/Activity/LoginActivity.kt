@@ -29,10 +29,13 @@ class LoginActivity : AppCompatActivity() {
     private var navigatedFromLoginSuccess = false // Flag to manage navigation state
 
     private val authViewModel: AuthViewModel by viewModels {
-        AuthViewModelFactory(
-            AuthRepository(RetrofitClient.instance),
-            UserPreferencesRepository(applicationContext)
-        )
+        val userPrefsRepo = UserPreferencesRepository(applicationContext)
+
+        // 2. Create AuthRepository instance, passing both ApiService and UserPreferencesRepository
+        val authRepo = AuthRepository(RetrofitClient.instance, userPrefsRepo)
+
+        // 3. Pass both to the factory
+        AuthViewModelFactory(authRepo, userPrefsRepo)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,8 +72,7 @@ class LoginActivity : AppCompatActivity() {
     private fun setupObservers() {
         // Observe the UI state from AuthViewModel
         authViewModel.authUiState.observe(this, Observer { state ->
-            // Reset common UI elements
-            binding.btnLogin.isEnabled = true
+            binding.btnLogin.isEnabled = true // Reset button state by default
 
             when (state) {
                 is AuthUiState.Idle -> {
@@ -80,16 +82,25 @@ class LoginActivity : AppCompatActivity() {
                     binding.btnLogin.isEnabled = false
                 }
                 is AuthUiState.Success -> {
-                    // Important: The actual navigation is now handled by the isLoggedIn observer
-                    // to ensure it happens consistently, even if the user was already logged in.
-                    // This state primarily confirms the login *action* was successful.
                     Toast.makeText(this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show()
                     Log.i("LoginActivity", "Login action successful.")
-                    navigatedFromLoginSuccess = true // Set flag that success state was reached
-                    // The isLoggedIn observer will see true and navigate.
+                    navigatedFromLoginSuccess = true
                 }
                 is AuthUiState.Error -> {
                     Log.e("LoginActivity", "Login failed: ${state.message}")
+                    Toast.makeText(this, "Login Failed: ${state.message}", Toast.LENGTH_LONG).show() // Show error to user
+                }
+                // Option 1: Add specific branches if they exist and are relevant here
+                // is AuthUiState.LoggedOut -> {
+                //    // Handle LoggedOut state specifically if needed in this observer
+                //    // Often, the isLoggedIn observer handles the navigation for logout
+                // }
+                else -> {
+                    // This branch handles any other states you might add to AuthUiState later
+                    // or if AuthUiState.LoggedOut is not specifically handled above.
+                    // You might not need to do anything specific here, but the else is required
+                    // for exhaustiveness if not all sealed subtypes are covered.
+                    Log.d("LoginActivity", "Unhandled AuthUiState: $state")
                 }
             }
         })

@@ -6,8 +6,11 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
-import androidx.appcompat.widget.SearchView // Keep this for the SearchView widget
+import androidx.appcompat.widget.SearchView
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,25 +19,33 @@ import androidx.viewpager2.widget.MarginPageTransformer
 import com.example.banhangs.Adapter.CategoryAdapter
 import com.example.banhangs.Adapter.RecommendedAdapter
 import com.example.banhangs.Adapter.SliderAdapter
-import com.example.banhangs.Helper.SessionManager // Import SessionManager
-// import com.example.banhangs.Model.CategoryModel // Already imported if CategoryAdapter uses it
-// import com.example.banhangs.Model.ProductDetailsModel // Already imported if RecommendedAdapter uses it
-// import com.example.banhangs.Model.SliderModel // Already imported if SliderAdapter uses it
 import com.example.banhangs.R
+import com.example.banhangs.ViewModel.AuthViewModel // For observing login state
 import com.example.banhangs.ViewModel.MainViewModel
 import com.example.banhangs.databinding.ActivityMainBinding
-import com.google.firebase.auth.FirebaseAuth // Keep for auth state, but not for profile name directly
+import com.example.banhangs.Factory.AuthViewModelFactory // If you initialize AuthViewModel here
+import com.example.banhangs.Network.RetrofitClient // For factory
+import com.example.banhangs.Repository.AuthRepository // For factory
+import com.example.banhangs.Repository.UserPreferencesRepository
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
 
-// Remove FirebaseDatabase if only used for profile name
-// import com.google.firebase.database.FirebaseDatabase
+// Removed: import com.google.firebase.auth.FirebaseAuth
+// Removed: import com.example.banhangs.Helper.SessionManager
 
 class MainActivity : BaseActivity() {
     private lateinit var binding: ActivityMainBinding
-    // private lateinit var tinyDB: TinyDB // Remove TinyDB if SessionManager handles all needed persistence
-    private val viewModel: MainViewModel by viewModels()
-    private lateinit var auth: FirebaseAuth
-    private lateinit var sessionManager: SessionManager
-    // In MainActivity.kt (continued)
+    private val mainViewModel: MainViewModel by viewModels() // Your existing MainViewModel
+    private val authViewModel: AuthViewModel by viewModels { // For login status and user data access
+        AuthViewModelFactory(
+            AuthRepository(RetrofitClient.instance, UserPreferencesRepository(applicationContext)),
+            UserPreferencesRepository(applicationContext)
+        )
+    }
+    // Direct access to UserPreferencesRepository for observing flows not exposed by AuthViewModel
+    private val userPreferencesRepository: UserPreferencesRepository by lazy {
+        UserPreferencesRepository(applicationContext)
+    }
 
     private val TAG = "MainActivity"
 
@@ -47,29 +58,34 @@ class MainActivity : BaseActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // tinyDB = TinyDB(this) // Remove if not used for other purposes
-        auth = FirebaseAuth.getInstance() // Keep for checking login status
-        sessionManager = SessionManager(this) // Initialize SessionManager
+        // LoginActivity is responsible for navigating here only if logged in.
+        // This is a fallback check.
+        lifecycleScope.launch {
+            if (userPreferencesRepository.getUserToken() == null) {
+                Log.w(TAG, "No auth token found, navigating to LoginActivity.")
+                navigateToLogin()
+                return@launch // Stop further execution in onCreate if navigating away
+            }
 
-        // Check login status using SessionManager's token and Firebase Auth if needed for verification
-        if (sessionManager.fetchAuthToken() == null /* || auth.currentUser == null || !auth.currentUser!!.isEmailVerified */) {
-            // If you still want to use Firebase for email verification check, uncomment the auth part.
-            // Otherwise, just checking for the token from your API might be sufficient.
-            navigateToLogin()
-            return // Important to return if navigating away
+            // If token exists, proceed with setup
+            Log.d(TAG, "Auth token found, proceeding with MainActivity setup.")
+            setupViews()
+            observeMainViewModel() // Renamed for clarity
+            observeAuthData()    // New observer for auth-related data like profile name
+            loadInitialData()
         }
-
-        setupViews()
-        observeViewModel()
-        loadInitialData()
-        loadProfileNameFromSession() // Load profile name from SessionManager
     }
 
     override fun onResume() {
         super.onResume()
-        // Refresh profile name in case it changed in ProfileActivity
-        if (sessionManager.fetchAuthToken() != null) {
-            loadProfileNameFromSession()
+        // The profile name will update reactively via observeAuthData() if it changes.
+        // You might want to re-check the token validity here if tokens have a short lifespan
+        // and trigger a re-login or refresh if necessary, but that's a more advanced scenario.
+        lifecycleScope.launch {
+            if (userPreferencesRepository.getUserToken() == null && !isFinishing) {
+                Log.w(TAG, "onResume: No auth token found, navigating to LoginActivity.")
+                navigateToLogin()
+            }
         }
     }
 
@@ -89,8 +105,6 @@ class MainActivity : BaseActivity() {
         // Category Adapter
         categoryAdapter = CategoryAdapter(mutableListOf())
         binding.viewCategory.layoutManager =
-                // In MainActivity.kt (continued)
-
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         binding.viewCategory.adapter = categoryAdapter
 
@@ -103,11 +117,6 @@ class MainActivity : BaseActivity() {
         binding.viewPager2.getChildAt(0).overScrollMode = RecyclerView.OVER_SCROLL_NEVER
         val compositePageTransformer = CompositePageTransformer().apply {
             addTransformer(MarginPageTransformer(40))
-            // Example of another transformer:
-            // addTransformer { page, position ->
-            //     val r = 1 - Math.abs(position)
-            //     page.scaleY = 0.85f + r * 0.15f
-            // }
         }
         binding.viewPager2.setPageTransformer(compositePageTransformer)
 
@@ -116,38 +125,68 @@ class MainActivity : BaseActivity() {
     }
 
     private fun loadInitialData() {
-        viewModel.loadBanners()
-        viewModel.loadCategories()
-        viewModel.loadRecommendedItems()
+        // These API calls in MainViewModel should now internally use the token
+        // obtained from UserPreferencesRepository (via AuthRepository or directly).
+        mainViewModel.loadBanners()
+        mainViewModel.loadCategories()
+        mainViewModel.loadRecommendedItems()
     }
 
-    private fun observeViewModel() {
-        viewModel.isLoading.observe(this, Observer { isLoading ->
-            // This is a general loading state. You might want more granular control.
+    private fun observeAuthData() {
+        // Observe user's full name
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                userPreferencesRepository.userFullNameFlow.collect { profileName ->
+                    if (!profileName.isNullOrEmpty()) {
+                        binding.nametitle.text = profileName
+                        Log.d(TAG, "Profile name updated from DataStore: $profileName")
+                    } else {
+                        binding.nametitle.text = getString(R.string.default_customer_name)
+                        Log.d(TAG, "Profile name from DataStore was null/empty, used default.")
+                    }
+                }
+            }
+        }
+
+        // Optionally, observe isLoggedIn from AuthViewModel if MainActivity needs to
+        // react to logout events initiated from within MainActivity itself (e.g., a logout button here)
+        // or to double-check consistency.
+        authViewModel.isLoggedIn.observe(this) { isLoggedIn ->
+            Log.d(TAG, "isLoggedIn state observed in MainActivity: $isLoggedIn")
+            if (!isLoggedIn && !isFinishing) { // Ensure not to navigate if activity is finishing
+                // This would be a more forceful redirect if for some reason token got cleared
+                // and the initial check in onCreate/onResume didn't catch it before UI setup.
+                Log.w(TAG, "Observed logged out state, navigating to login.")
+                navigateToLogin()
+            }
+        }
+    }
+
+    private fun observeMainViewModel() { // Renamed from observeViewModel
+        mainViewModel.isLoading.observe(this, Observer { isLoading ->
             binding.progressBarSlider.visibility = if (isLoading) View.VISIBLE else View.GONE
             binding.progressBarCategory.visibility = if (isLoading) View.VISIBLE else View.GONE
             binding.progressBarRecommend.visibility = if (isLoading) View.VISIBLE else View.GONE
         })
 
-        viewModel.errorMessage.observe(this, Observer { errorMessage ->
+        mainViewModel.errorMessage.observe(this, Observer { errorMessage ->
             errorMessage?.let {
                 Toast.makeText(this, it, Toast.LENGTH_LONG).show()
-                Log.e(TAG, "ViewModel Error: $it")
-                // Potentially hide all progress bars on error too
+                Log.e(TAG, "MainViewModel Error: $it")
                 binding.progressBarSlider.visibility = View.GONE
                 binding.progressBarCategory.visibility = View.GONE
                 binding.progressBarRecommend.visibility = View.GONE
             }
         })
 
-        viewModel.banners.observe(this, Observer { banners ->
-            binding.progressBarSlider.visibility = View.GONE // Hide specific progress bar
+        mainViewModel.banners.observe(this, Observer { banners ->
+            binding.progressBarSlider.visibility = View.GONE
             if (banners.isNullOrEmpty()) {
                 Log.w(TAG, "Banners are empty or null")
                 binding.dotIncator.visibility = View.GONE
             } else {
                 Log.d(TAG, "Updating banners: ${banners.size}")
-                sliderAdapter.updateData(banners.toMutableList()) // Adapter has updateData now
+                sliderAdapter.updateData(banners.toMutableList())
                 if (banners.size > 1) {
                     binding.dotIncator.visibility = View.VISIBLE
                     binding.dotIncator.attachTo(binding.viewPager2)
@@ -157,36 +196,30 @@ class MainActivity : BaseActivity() {
             }
         })
 
-        viewModel.categories.observe(this, Observer { categories ->
-            binding.progressBarCategory.visibility = View.GONE // Hide specific progress bar
+        mainViewModel.categories.observe(this, Observer { categories ->
+            binding.progressBarCategory.visibility = View.GONE
             if (categories.isNullOrEmpty()) {
                 Log.w(TAG, "Categories are empty or null")
-                // Toast.makeText(this, "No categories available", Toast.LENGTH_SHORT).show() // Optional
                 categoryAdapter.updateData(emptyList())
             } else {
                 Log.d(TAG, "Updating categories: ${categories.size}")
-                categoryAdapter.updateData(categories.toMutableList()) // Adapter has updateData now
+                categoryAdapter.updateData(categories.toMutableList())
             }
         })
 
-        viewModel.recommendedItems.observe(this, Observer { items ->
-            binding.progressBarRecommend.visibility = View.GONE // Hide specific progress bar
+        mainViewModel.recommendedItems.observe(this, Observer { items ->
+            binding.progressBarRecommend.visibility = View.GONE
             if (items.isNullOrEmpty()) {
                 Log.w(TAG, "Recommended items are empty or null")
-                // Toast.makeText(this, "No recommended items available", Toast.LENGTH_SHORT).show() // Optional
                 recommendedAdapter.updateData(emptyList())
             } else {
                 Log.d(TAG, "Updating recommended items: ${items.size}")
-                recommendedAdapter.updateData(items.toMutableList()) // Adapter has updateData now
+                recommendedAdapter.updateData(items.toMutableList())
             }
         })
 
-        // Observer for search results (primarily for navigation after search)
-        // The isLoading observer within performSearch handles the direct navigation logic.
-        viewModel.searchedItems.observe(this, Observer { searchResults ->
-            // This observer can be used if MainActivity needs to react to search results
-            // even if navigation happens elsewhere. For now, just logging.
-            if (viewModel.isLoading.value == false) { // Ensure loading is complete
+        mainViewModel.searchedItems.observe(this, Observer { searchResults ->
+            if (mainViewModel.isLoading.value == false) {
                 Log.d(TAG, "Searched items LiveData updated, count: ${searchResults?.size ?: "null"}")
             }
         })
@@ -199,7 +232,6 @@ class MainActivity : BaseActivity() {
             binding.searchView.visibility = View.VISIBLE
             binding.btnSearchSubmit.visibility = View.VISIBLE
             binding.searchView.requestFocus()
-            // Consider showing keyboard explicitly if needed
         }
 
         binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
@@ -216,7 +248,6 @@ class MainActivity : BaseActivity() {
             }
 
             override fun onQueryTextChange(newText: String?): Boolean {
-                // Implement live suggestions if desired, but be mindful of API call frequency.
                 return true
             }
         })
@@ -234,32 +265,23 @@ class MainActivity : BaseActivity() {
 
     private fun performSearch(query: String) {
         Log.d(TAG, "Performing search for: $query")
-        // You could show a specific search progress bar here
-        // binding.searchProgressBar.visibility = View.VISIBLE
+        mainViewModel.searchProductsByName(query) // Call MainViewModel
 
-        viewModel.searchProductsByName(query) // Call ViewModel
-
-        // Use a one-time observer for the isLoading state related to this search action
-        // to handle navigation or displaying "no results" message.
         val searchLoadingObserver = object : Observer<Boolean> {
             override fun onChanged(isLoadingValue: Boolean) {
-                if (!isLoadingValue) { // When loading is finished for the search
-                    viewModel.isLoading.removeObserver(this) // Important: remove the observer
-
-                    val searchResults = viewModel.searchedItems.value
+                if (!isLoadingValue) {
+                    mainViewModel.isLoading.removeObserver(this)
+                    val searchResults = mainViewModel.searchedItems.value
                     if (!searchResults.isNullOrEmpty()) {
                         Log.d(TAG, "Search successful for '$query', found ${searchResults.size} items. Navigating.")
                         val intent = Intent(this@MainActivity, ListItemsActivity::class.java).apply {
                             putExtra("searchQuery", query)
-                            // Pass the actual search results (ProductDetailsModel should be Parcelable)
                             putParcelableArrayListExtra("searchResults", ArrayList(searchResults))
                         }
                         startActivity(intent)
                     } else {
-                        // Check if there was an error message from the ViewModel for this specific search
-                        val lastError = viewModel.errorMessage.value
+                        val lastError = mainViewModel.errorMessage.value
                         if (lastError != null && lastError.contains("search", ignoreCase = true)) {
-                            // Error already shown by the general error observer
                             Log.d(TAG, "Search for '$query' failed or returned no results with error: $lastError")
                         } else {
                             Log.d(TAG, "No results found for query: $query")
@@ -267,11 +289,10 @@ class MainActivity : BaseActivity() {
                         }
                     }
                     resetSearchUI()
-                    // binding.searchProgressBar.visibility = View.GONE
                 }
             }
         }
-        viewModel.isLoading.observe(this, searchLoadingObserver)
+        mainViewModel.isLoading.observe(this, searchLoadingObserver)
     }
 
     private fun resetSearchUI() {
@@ -279,26 +300,6 @@ class MainActivity : BaseActivity() {
         binding.searchView.visibility = View.GONE
         binding.btnSearchSubmit.visibility = View.GONE
         binding.btnSearch.visibility = View.VISIBLE
-        // Hide specific search progress bar if you have one
-        // binding.searchProgressBar.visibility = View.GONE
-    }
-
-    // In MainActivity.kt (continued)
-
-    private fun loadProfileNameFromSession() {
-        // Fetch user's name from SessionManager (assuming it was saved during login)
-        val profileName = sessionManager.fetchUserFullName() // Assuming SessionManager has getUserName()
-
-        if (!profileName.isNullOrEmpty()) {
-            binding.nametitle.text = profileName
-            Log.d(TAG, "Profile name loaded from SessionManager: $profileName")
-        } else {
-            // Fallback if no name is stored in SessionManager
-            binding.nametitle.text = getString(R.string.default_customer_name) // Use a string resource
-            Log.d(TAG, "Profile name from SessionManager was null/empty, used default.")
-            // Optionally, you could try to fetch it from an API endpoint if not in session,
-            // but typically it's fetched once at login.
-        }
     }
 
     private fun initBottomMenu() {
@@ -307,24 +308,20 @@ class MainActivity : BaseActivity() {
         }
         binding.profileBtn.setOnClickListener {
             startActivity(Intent(this@MainActivity, ProfileActivity::class.java))
+            // ProfileActivity should save any name changes to UserPreferencesRepository
+            // so the userFullNameFlow in MainActivity gets the update.
         }
         binding.orderBtn.setOnClickListener {
             startActivity(Intent(this@MainActivity, MyOrderActivity::class.java))
         }
         binding.chatBtn.setOnClickListener {
-            // Assuming MyChatActivity exists and is set up
             startActivity(Intent(this@MainActivity, MyChatActivity::class.java))
         }
-        // Example: Home button (if your current activity isn't the primary "home")
-        // binding.homeBtn.setOnClickListener {
-        //    // If MainActivity is already home, this might refresh or do nothing
-        //    // Or, if you have a different main landing activity:
-        //    // startActivity(Intent(this@MainActivity, HomeActivity::class.java))
+
+        // Example Logout Button (if you add one to activity_main.xml)
+        // binding.btnLogout.setOnClickListener {
+        //    Log.d(TAG, "Logout button clicked.")
+        //    authViewModel.logoutUser() // This will trigger isLoggedIn observer and navigateToLogin
         // }
     }
 }
-
-// Ensure you have these string resources in res/values/strings.xml:
-// <string name="please_enter_product_name">Vui lòng nhập tên sản phẩm</string>
-// <string name="no_products_found_for_query">Không tìm thấy sản phẩm nào cho \'%1$s\'</string>
-// <string name="default_customer_name">Khách hàng</string>

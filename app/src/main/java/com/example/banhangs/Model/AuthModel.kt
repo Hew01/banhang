@@ -100,17 +100,18 @@ data class UserInformationRequest( // Part of RegisterRequest
 )
 
 data class RegisterRequest(
-    @SerializedName("registerIdentifier")
-    val registerIdentifier: String, // This could be email or username
+    @SerializedName("email")
+    val email: String, // This could be email or username
 
     @SerializedName("password")
     val password: String, // Plain text password
 
-    @SerializedName("registerType")
-    val registerType: Int, // Define what these types mean (e.g., 0 for email, 1 for phone)
+    @SerializedName("firstName")
+    val firstName: String,
 
-    @SerializedName("userInformation")
-    val userInformation: UserInformationRequest
+    @SerializedName("lastName")
+    val lastName: String,
+
 )
 
 data class RegisterResponseData( // The "data" object within RegisterResponse

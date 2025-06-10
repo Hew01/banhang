@@ -3,8 +3,10 @@ package com.example.banhangs.Repository
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -15,6 +17,13 @@ import java.io.IOException
 // Extension property to create the DataStore instance (typically at the top level of your Kotlin file)
 // The name "user_preferences" will be the filename of the DataStore file.
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
+
+object UserPreferencesKeys {
+    val USER_TOKEN = stringPreferencesKey("user_token")
+    val USER_ID = stringPreferencesKey("user_id")
+    val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
+    val USER_FULL_NAME = stringPreferencesKey("user_full_name") // <-- ADDED KEY
+}
 
 class UserPreferencesRepository(private val context: Context) {
 
@@ -80,6 +89,29 @@ class UserPreferencesRepository(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[UserPreferencesKeys.USER_ID] = userId
         }
+    }
+
+    // --- User Full Name --- <--- NEW SECTION ---
+    val userFullNameFlow: Flow<String?> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[UserPreferencesKeys.USER_FULL_NAME] // Use the key here
+        }
+
+    suspend fun saveUserFullName(fullName: String) {
+        context.dataStore.edit { preferences ->
+            preferences[UserPreferencesKeys.USER_FULL_NAME] = fullName
+        }
+    }
+
+    suspend fun getUserFullName(): String? { // Optional: for one-time reads
+        return userFullNameFlow.firstOrNull()
     }
 
     // --- Login Status ---

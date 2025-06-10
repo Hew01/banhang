@@ -150,4 +150,9 @@ interface ApiService {
         @Header("Authorization") token: String, // JWT token is required
         @Body changePasswordRequest: ChangePasswordRequest
     ): Response<GenericSuccessApiResponse>
+
+    @POST("api/auth/logout") // <<<< ADJUST TO YOUR ACTUAL LOGOUT ENDPOINT AND HTTP METHOD
+    suspend fun logoutUserApi(
+        @Header("Authorization") token: String
+    ): Response<GenericSuccessApiResponse>
 }
