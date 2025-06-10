@@ -53,7 +53,7 @@ class MyOrderViewModel(application: Application) : AndroidViewModel(application)
             try {
                 // Ensure your ApiService.getOrders() is a suspend function
                 // and takes the Authorization header.
-                val response = apiService.getOrdersByUserId(currentUserId,"Bearer $token")
+                val response = apiService.getOrdersByUserId(currentUserId)
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
                     if (apiResponse != null && apiResponse.retCode == 0) { // Assuming ERetCode.Successfull is 0

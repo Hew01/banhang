@@ -314,9 +314,9 @@ class MainActivity : BaseActivity() {
         binding.orderBtn.setOnClickListener {
             startActivity(Intent(this@MainActivity, MyOrderActivity::class.java))
         }
-        binding.chatBtn.setOnClickListener {
-            startActivity(Intent(this@MainActivity, MyChatActivity::class.java))
-        }
+//        binding.chatBtn.setOnClickListener {
+//            startActivity(Intent(this@MainActivity, MyChatActivity::class.java))
+//        }
 
         // Example Logout Button (if you add one to activity_main.xml)
         // binding.btnLogout.setOnClickListener {

@@ -227,18 +227,18 @@ class MainViewModel : ViewModel() {
             try {
                 Log.d(TAG, "Fetching recommended products.")
                 // ADJUSTING THE EXPECTED TYPE HERE TO MATCH THE ERROR MESSAGE'S "ACTUAL" TYPE
-                val response: retrofit2.Response<List<ProductDetailsModel>> = // <--- Adjusted type
+                val response: retrofit2.Response<ApiResponse<List<ProductDetailsModel>>> = // <--- Adjusted type
                     apiService.getRecommendedItems(userId = "68484aa57b44b2d92ca2018a")
 
                 if (response.isSuccessful) {
-                    val productList: List<ProductDetailsModel>? = response.body()
-
-                    if (productList != null) {
-                        _recommendedItems.value =
-                            productList // Directly assign, no complex mapping needed
-                        Log.i(TAG, "Successfully loaded ${productList.size} recommended products.")
+                    val apiResponse = response.body()
+                    // Check the custom success condition (e.g., retCode == 0) and that data is not null
+                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data != null) {
+                        _recommendedItems.value = apiResponse.data // Directly assign the list from apiResponse.data
+                        Log.i(TAG, "Successfully loaded ${apiResponse.data.size} recommended products.")
                     } else {
-                        val errorMsg = "Recommended items API success but body was null."
+                        // Handle API-specific error (e.g., retCode != 0 or null data despite HTTP 200)
+                        val errorMsg = "Recommended items API Error: retCode=${apiResponse?.retCode}, message=${apiResponse?.systemMessage ?: "Unknown API logic error"}"
                         _errorMessage.value = errorMsg
                         _recommendedItems.value = emptyList()
                         Log.e(TAG, errorMsg)

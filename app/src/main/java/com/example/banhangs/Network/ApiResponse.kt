@@ -1,5 +1,6 @@
 package com.example.banhangs.Network
 
+import com.example.banhangs.Model.ProductDetailsModel
 import com.google.gson.annotations.SerializedName
 
 data class ApiResponse<T>(

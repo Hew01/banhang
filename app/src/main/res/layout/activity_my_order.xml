@@ -16,13 +16,13 @@ app:layout_constraintStart_toStartOf="parent"
 app:layout_constraintEnd_toEndOf="parent">
 
 <!-- THIS IS THE TOOLBAR -->
-<androidx.appcompat.widget.Toolbar
-    android:id="@+id/toolbar"
-android:layout_width="match_parent"
-android:layout_height="?attr/actionBarSize"
-android:background="?attr/colorPrimary"
-app:titleTextColor="@android:color/white"
-app:title="My Orders" /> <!-- Or set programmatically -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/green"
+        app:title="My Orders"
+        app:titleTextColor="@android:color/white" /> <!-- Or set programmatically -->
 
 </com.google.android.material.appbar.AppBarLayout>
 

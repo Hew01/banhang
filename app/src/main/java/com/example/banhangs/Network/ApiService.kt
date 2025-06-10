@@ -47,21 +47,21 @@ interface ApiService {
     @POST("api/Authentication/register") // Ensure this path is correct
     suspend fun register(@Body registerRequest: RegisterRequest): Response<RegisterApiResponse>
 
-    @GET("api/products/{id}") // Or your actual path, e.g., "api/Product/GetProductDetails"
+    @GET("api/Products/{id}") // Or your actual path, e.g., "api/Product/GetProductDetails"
     suspend fun getProductDetails(@Path("id") productId: String): Response<ApiResponse<ProductDetailsModel>>
     // Where ProductDetailsApiResponse is:
     // typealias ProductDetailsApiResponse = ApiResponse<ProductDetailData>
     // And ProductDetailData is the DTO class from your API.
 
-    @GET("api/products/search") // <<<< YOUR ACTUAL SEARCH ENDPOINT PATH
+    @GET("api/Products/search/{keyword}") // <<<< YOUR ACTUAL SEARCH ENDPOINT PATH
     suspend fun searchProductsByName(
-        @Query("search_term") searchTerm: String // <<<< YOUR ACTUAL QUERY PARAMETER NAME FOR THE SEARCH TERM
+        @Path("search_term") searchTerm: String // <<<< YOUR ACTUAL QUERY PARAMETER NAME FOR THE SEARCH TERM
     ): Response<List<ProductDetailsApiResponse>> // Assuming the API returns a list of items
 
     @GET("api/Products/recommended/{userId}") // << YOUR ACTUAL ENDPOINT FOR RECOMMENDED ITEMS
-    suspend fun getRecommendedItems(@Path("userId") userId: String): Response<List<ProductDetailsModel>>
+    suspend fun getRecommendedItems(@Path("userId") userId: String): Response<ApiResponse<List<ProductDetailsModel>>>
 
-    @GET("api/categories") // << YOUR ACTUAL ENDPOINT FOR CATEGORIES
+    @GET("api/Categories") // << YOUR ACTUAL ENDPOINT FOR CATEGORIES
     suspend fun getCategories(): Response<CategoriesApiResponse>
 
     @GET("api/Products/category/{categoryId}") // Corrected endpoint
@@ -69,7 +69,7 @@ interface ApiService {
         @Path("categoryId") categoryId: String
     ): Response<ProductsByCategoryResponse>
 
-    @GET("api/banners")    // << YOUR ACTUAL ENDPOINT FOR BANNERS
+    @GET("api/Banners")    // << YOUR ACTUAL ENDPOINT FOR BANNERS
     suspend fun getBanners(): Response<List<SliderModel>>
 
     // --- Carts ---
@@ -95,14 +95,6 @@ interface ApiService {
 
     @PUT("api/Carts/remove/{userId}") // Example endpoint
     suspend fun removeCartItem(@Path("userId") userId: String, @Body itemUpdateRequest: CartItemUpdateRequest): Response<GenericSuccessApiResponse>
-
-
-    // If placeOrder and verifyAndPlaceOrder logic moves to CartRepository:
-    @POST("api/orders/create")
-    suspend fun createOrder(
-        @Header("Authorization") token: String,
-        @Body orderRequest: PlaceOrderRequest // Define OrderRequest model
-    ): Response<PlaceOrderResponseData> // Define OrderConfirmation model
 
 
     /**
@@ -155,21 +147,14 @@ interface ApiService {
         @Body changePasswordRequest: ChangePasswordRequest
     ): Response<GenericSuccessApiResponse>
 
-    @POST("api/auth/logout") // <<<< ADJUST TO YOUR ACTUAL LOGOUT ENDPOINT AND HTTP METHOD
+    @POST("api/Authentication/logout") // <<<< ADJUST TO YOUR ACTUAL LOGOUT ENDPOINT AND HTTP METHOD
     suspend fun logoutUserApi(
         @Header("Authorization") token: String
     ): Response<GenericSuccessApiResponse>
 
-    @POST("api/orders/create")
-    suspend fun createGenericOrder(
-        @Header("Authorization") token: String,
-        @Body orderRequest: PlaceOrderRequest // Your existing PlaceOrderRequest
-    ): Response<PlaceOrderResponseData>
-
     @GET("api/Orders/user/{userId}")
     suspend fun getOrdersByUserId(
         @Path("userId") userId: String,
-        @Header("Authorization") token: String? // Assuming optional for now
     ): Response<ApiResponse<List<OrderData>>>
 
     /**
