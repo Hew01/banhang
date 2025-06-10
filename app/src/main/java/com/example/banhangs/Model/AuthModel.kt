@@ -244,6 +244,10 @@ data class UpdateCartItemQuantityRequest( // For PUT /api/Carts (update quantity
     @SerializedName("quantity") val quantity: Int
 )
 
+data class CartItemUpdateRequest(
+    @SerializedName("productId") val productId: String,
+    @SerializedName("quantity")val quantity: Int
+)
 
 // Generic response for operations that return { "data": true, ... }
 typealias GenericSuccessApiResponse = ApiResponse<Boolean>

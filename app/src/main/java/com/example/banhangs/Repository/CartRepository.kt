@@ -5,14 +5,13 @@ package com.example.banhangs.Repository
 // Use the CartItemData from your Model file
 import com.example.banhangs.Model.AddToCartRequest
 import com.example.banhangs.Model.CartItemData
+import com.example.banhangs.Model.CartItemUpdateRequest
 // Assuming your API returns a structure like ApiResponse<List<CartItemData>> for getCart
-import com.example.banhangs.Model.CartApiResponse // Your typealias for ApiResponse<List<CartItemData>>
 // Generic API response for updates/removals
-import com.example.banhangs.Model.GenericSuccessApiResponse // Your typealias for ApiResponse<Boolean> or similar for success
 import com.example.banhangs.Network.ApiService
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
+import kotlin.text.isNullOrBlank
 
 class CartRepository(
     private val apiService: ApiService,
@@ -83,19 +82,35 @@ class CartRepository(
 
     suspend fun updateItemQuantity(productId: String, newQuantity: Int): Result<Unit> {
         val token = getAuthToken()
-        if (token.isNullOrEmpty()) return Result.failure(Exception("User not authenticated."))
+        if (token.isNullOrBlank()) { // Changed from isNullOrEmpty to isNullOrBlank for consistency
+            return Result.failure(Exception("User not authenticated to update cart quantity."))
+        }
+
+        // Create the request body object
+        val itemUpdateRequest = CartItemUpdateRequest(productId = productId, quantity = newQuantity)
 
         return withContext(Dispatchers.IO) {
             try {
-                // Assuming your apiService.updateCartItemQuantity expects a token, productId, and newQuantity
-                // And returns a Response<GenericSuccessApiResponse> or similar
-                val response = apiService.updateCartItemQuantity("Bearer $token", productId, newQuantity)
+                // Call the updated apiService.updateCartItem method
+                val response = apiService.updateCartItemQuantity("Bearer $token",
+                    itemUpdateRequest
+                )
 
-                if (response.isSuccessful && response.body()?.retCode == 0) {
-                    // If your GenericSuccessApiResponse's data field is Boolean, you might check response.body()?.data == true
-                    Result.success(Unit)
+                if (response.isSuccessful) {
+                    val apiResponse = response.body()
+                    // Check according to MyApiResponse<Boolean> structure
+                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data == true) {
+                        Result.success(Unit)
+                    } else {
+                        // Use systemMessage from MyApiResponse or provide a default
+                        Result.failure(Exception(apiResponse?.systemMessage ?: "Failed to update quantity: Backend error or data false"))
+                    }
                 } else {
-                    Result.failure(Exception(response.body()?.systemMessage ?: "Failed to update quantity"))
+                    // Handle HTTP error responses
+                    val errorBody = response.errorBody()?.string() // Attempt to get more error info
+                    val errorMessage = "Error updating quantity: ${response.code()} - ${response.message()}" +
+                            if (!errorBody.isNullOrBlank()) ". Error Body: $errorBody" else ""
+                    Result.failure(Exception(errorMessage))
                 }
             } catch (e: Exception) {
                 Result.failure(Exception("Network error updating quantity: ${e.message}", e))

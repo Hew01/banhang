@@ -21,5 +21,5 @@ dependencyResolutionManagement {
 }
 
 
-rootProject.name = "DOANCS3" // Đặt tên cho dự án
+rootProject.name = "banhangs" // Đặt tên cho dự án
 include(":app") // Bao gồm module 'app'

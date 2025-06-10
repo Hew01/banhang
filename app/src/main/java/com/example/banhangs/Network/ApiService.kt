@@ -3,9 +3,8 @@ package com.example.banhangs.Network
 // In a new file, e.g., network/ApiService.kt
 import com.example.banhangs.Model.AddToCartRequest
 import com.example.banhangs.Model.ApiCommentModel
-import com.example.banhangs.Model.CartApiResponse
+import com.example.banhangs.Model.CartItemUpdateRequest
 import com.example.banhangs.Model.CategoriesApiResponse
-import com.example.banhangs.Model.CategoryModel
 import com.example.banhangs.Model.ChangePasswordRequest
 import com.example.banhangs.Model.CommentModel
 import com.example.banhangs.Model.CommentsListApiResponse
@@ -22,9 +21,7 @@ import com.example.banhangs.Model.ProductsByCategoryApiResponse
 import com.example.banhangs.Model.ProductsByCategoryResponse
 import com.example.banhangs.Model.RegisterApiResponse
 import com.example.banhangs.Model.RegisterRequest
-import com.example.banhangs.Model.RemoveProductFromCartRequest
 import com.example.banhangs.Model.SliderModel
-import com.example.banhangs.Model.UpdateCartItemQuantityRequest
 import com.example.banhangs.Model.UserData
 import com.example.banhangs.Model.UserInformationRequest
 import retrofit2.Response
@@ -102,17 +99,16 @@ interface ApiService {
     @PUT("api/Carts") // Or use @Body if sending more data
     suspend fun updateCartItemQuantity(
         @Header("Authorization") token: String,
-        @Path("productId") productId: String,
-        @Query("quantity") newQuantity: Int // Or send as part of a request body
-    ): Response<GenericSuccessApiResponse> // Generic success/failure response
+        @Body itemUpdateRequest: CartItemUpdateRequest
+    ): Response<GenericSuccessApiResponse>
 
-    @DELETE("api/Carts/remove") // Example endpoint
+    @PUT("api/Carts/remove") // Example endpoint
     suspend fun removeCartItem(
         @Header("Authorization") token: String,
         @Path("productId") productId: String
     ): Response<GenericSuccessApiResponse>
 
-    @DELETE("api/Carts/clear") // Example endpoint
+    @PUT("api/Carts/clear") // Example endpoint
     suspend fun clearCart(@Header("Authorization") token: String): Response<GenericSuccessApiResponse>
 
     // If placeOrder and verifyAndPlaceOrder logic moves to CartRepository:
