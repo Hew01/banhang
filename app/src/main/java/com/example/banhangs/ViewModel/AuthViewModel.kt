@@ -11,6 +11,7 @@ import com.example.banhangs.Model.RegisterRequest
 import com.example.banhangs.Repository.AuthRepository
 import com.example.banhangs.Repository.UserPreferencesRepository
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlin.text.fold
 import kotlin.text.isNullOrBlank
 
@@ -118,25 +119,58 @@ class AuthViewModel(
          * Updates _authUiState (e.g., to redirect or update UI).
          */
         fun logoutUser() {
+//            _authUiState.value = AuthUiState.Loading // Indicate logout is in progress
+//            viewModelScope.launch {
+//                val result = authRepository.logoutUser() // Call the repository's logout
+//                result.fold(
+//                    onSuccess = {
+//                        // isLoggedInFlow will automatically update from clearUserPreferences
+//                        // No need to call userPreferencesRepository.clearUserPreferences() here anymore
+//                        _authUiState.value =
+//                            AuthUiState.LoggedOut // Signal successful logout for UI
+//                    },
+//                    onFailure = { exception ->
+//                        // Even on failure (e.g., API call failed but local was cleared, or local clear failed),
+//                        // UI should probably still treat it as logged out or provide an error.
+//                        // The isLoggedInFlow will reflect the local data state.
+//                        _authUiState.value = AuthUiState.Error(exception.message ?: "Logout failed")
+//                        // Consider if you still want to transition to LoggedOut state or a specific LogoutError state
+//                        // For simplicity, error message is shown, isLoggedInFlow handles redirection.
+//                    }
+//                )
+//            }
             _authUiState.value = AuthUiState.Loading // Indicate logout is in progress
+            Log.d("AuthViewModel_Debug", "logoutUser() called. Attempting to clear preferences.")
+
             viewModelScope.launch {
-                val result = authRepository.logoutUser() // Call the repository's logout
-                result.fold(
-                    onSuccess = {
-                        // isLoggedInFlow will automatically update from clearUserPreferences
-                        // No need to call userPreferencesRepository.clearUserPreferences() here anymore
-                        _authUiState.value =
-                            AuthUiState.LoggedOut // Signal successful logout for UI
-                    },
-                    onFailure = { exception ->
-                        // Even on failure (e.g., API call failed but local was cleared, or local clear failed),
-                        // UI should probably still treat it as logged out or provide an error.
-                        // The isLoggedInFlow will reflect the local data state.
-                        _authUiState.value = AuthUiState.Error(exception.message ?: "Logout failed")
-                        // Consider if you still want to transition to LoggedOut state or a specific LogoutError state
-                        // For simplicity, error message is shown, isLoggedInFlow handles redirection.
+                try {
+                    // 1. Directly call clearUserPreferences()
+                    userPreferencesRepository.clearUserPreferences()
+                    Log.d("AuthViewModel_Debug", "clearUserPreferences() completed.")
+
+                    // 2. Immediately try to fetch the token again
+                    // IMPORTANT: For this debug scenario within a non-suspend function's coroutine
+                    // and wanting to log immediately after, we might use runBlocking for simplicity
+                    // to get the value synchronously from the suspend function.
+                    // In real app code, you'd collect the flow or use another suspend function.
+                    val tokenAfterClear: String? = runBlocking { // Use runBlocking for debug only
+                        userPreferencesRepository.getUserToken()
                     }
-                )
+
+                    // 3. Log if the token is present
+                    if (tokenAfterClear.isNullOrBlank()) {
+                        Log.d("AuthViewModel_Debug", "Token after clear: NULL or BLANK. Preferences likely cleared.")
+                    } else {
+                        Log.e("AuthViewModel_Debug", "Token after clear: '$tokenAfterClear'. Preferences NOT fully cleared or race condition.")
+                    }
+
+                    // Update UI state to reflect logout
+                    _authUiState.value = AuthUiState.LoggedOut
+
+                } catch (e: Exception) {
+                    Log.e("AuthViewModel_Debug", "Error during debug logoutUser: ${e.message}", e)
+                    _authUiState.value = AuthUiState.Error("Debug Logout failed: ${e.message}")
+                }
             }
         }
 
