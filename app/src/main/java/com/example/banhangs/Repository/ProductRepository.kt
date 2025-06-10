@@ -37,39 +37,6 @@ class ProductRepository(private val apiService: ApiService) {
             Result.failure(Exception("Exception fetching product details: ${e.message}", e))
         }
     }
-    /**
-     * Fetches a list of products belonging to a specific category.
-     * @param categoryId The ID of the category.
-     */
-    suspend fun getProductsByCategory(categoryId: String): Result<List<ProductDetailsModel>> {
-        return withContext(Dispatchers.IO) {
-            try {
-                // Assuming ApiService has:
-                // suspend fun getProductsByCategory(@Query("categoryId") categoryId: String): Response<ProductsByCategoryApiResponse>
-                // And ProductsByCategoryApiResponse is typealias for ApiResponse<List<ProductSummaryData>>
-                // And ProductSummaryData needs mapping to ProductDetailsModel or a similar summary domain model.
-
-                val response = apiService.getProductsByCategory(categoryId) // This should return Response<ApiResponse<List<ProductSummaryData>>>
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data != null) {
-                        // apiResponse.data is List<ProductSummaryData> (DTOs)
-                        // You need to map this list to List<ProductDetailsModel> or List<ProductSummaryModel>
-                        // val productSummariesDto = apiResponse.data
-                        // Result.success(productSummariesDto.map { it.toDomainModel() })
-                        Result.success(apiResponse.data) // If ProductDetailsModel is directly in ApiResponse.data
-                    } else {
-                        val errorMessage = "Failed to get products by category: API Error - RetCode: ${apiResponse?.retCode}, Message: ${apiResponse?.systemMessage ?: response.message()}"
-                        Result.failure(Exception(errorMessage))
-                    }
-                } else {
-                    Result.failure(Exception("Failed to get products by category: Network Error - Code: ${response.code()}, Message: ${response.message()}"))
-                }
-            } catch (e: Exception) {
-                Result.failure(Exception("Failed to get products by category: Exception - ${e.message}", e))
-            } as Result<List<ProductDetailsModel>>
-        }
-    }
 
     /**
      * Searches for products based on a query string.
@@ -173,7 +140,7 @@ class ProductRepository(private val apiService: ApiService) {
                 // Assuming ApiService has:
                 // suspend fun getProductComments(@Path("productId") productId: String): Response<CommentsListApiResponse>
                 // And CommentsListApiResponse is typealias for ApiResponse<List<ApiCommentModel>>
-                val response = apiService.getProductComments(productId, productId)
+                val response = apiService.getProductComments(productId)
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
                     if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data != null) {

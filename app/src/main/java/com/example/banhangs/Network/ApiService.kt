@@ -58,13 +58,8 @@ interface ApiService {
         @Query("search_term") searchTerm: String // <<<< YOUR ACTUAL QUERY PARAMETER NAME FOR THE SEARCH TERM
     ): Response<List<ProductDetailsApiResponse>> // Assuming the API returns a list of items
 
-    @GET("api/products/category/{categoryId}") // Or your actual path, e.g., "api/Product/GetProductsByCategory"
-    suspend fun getProductsByCategory(@Path("categoryId") categoryId: String): Response<ProductsByCategoryApiResponse>
-    // Where ProductsByCategoryApiResponse is:
-    // typealias ProductsByCategoryApiResponse = ApiResponse<List<ProductSummaryData>>
-
-    @GET("api/items/recommended") // << YOUR ACTUAL ENDPOINT FOR RECOMMENDED ITEMS
-    suspend fun getRecommendedItems(): Response<List<ProductDetailsModel>>
+    @GET("api/Products/recommended/{userId}") // << YOUR ACTUAL ENDPOINT FOR RECOMMENDED ITEMS
+    suspend fun getRecommendedItems(@Path("userId") userId: String): Response<List<ProductDetailsModel>>
 
     @GET("api/categories") // << YOUR ACTUAL ENDPOINT FOR CATEGORIES
     suspend fun getCategories(): Response<CategoriesApiResponse>
@@ -76,18 +71,6 @@ interface ApiService {
 
     @GET("api/banners")    // << YOUR ACTUAL ENDPOINT FOR BANNERS
     suspend fun getBanners(): Response<List<SliderModel>>
-
-    @GET("api/items/{itemId}")
-    suspend fun getItemDetails(@Path("itemId") itemId: String): Response<ProductDetailsModel>
-
-    @GET("api/items/{itemId}/comments")
-    suspend fun getItemComments(@Path("itemId") itemId: String): Response<List<CommentModel>>
-
-    @POST("api/items/{itemId}/comments")
-    suspend fun postComment(
-        @Path("itemId") itemId: String,
-        @Body commentRequest: CommentRequest // Your CommentRequest data class
-    ): Response<CommentModel> // Or whatever your API returns for a new comment
 
     // --- Carts ---
 
@@ -108,10 +91,10 @@ interface ApiService {
     ): Response<GenericSuccessApiResponse>
 
     @PUT("api/Carts/clear/{userId}") // Example endpoint
-    suspend fun clearCart(@Path("userId") userId: String,): Response<GenericSuccessApiResponse>
+    suspend fun clearCart(@Path("userId") userId: String): Response<GenericSuccessApiResponse>
 
     @PUT("api/Carts/remove/{userId}") // Example endpoint
-    suspend fun removeCartItem(@Path("userId") userId: String,): Response<GenericSuccessApiResponse>
+    suspend fun removeCartItem(@Path("userId") userId: String, @Body itemUpdateRequest: CartItemUpdateRequest): Response<GenericSuccessApiResponse>
 
 
     // If placeOrder and verifyAndPlaceOrder logic moves to CartRepository:

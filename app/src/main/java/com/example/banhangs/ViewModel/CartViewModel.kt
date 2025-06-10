@@ -3,7 +3,10 @@ package com.example.banhangs.ViewModel // Or your ViewModel package
 import androidx.lifecycle.*
 import com.example.banhangs.Repository.CartRepository
 import com.example.banhangs.Model.CartItemData
+import com.example.banhangs.Model.CartItemUpdateRequest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -87,33 +90,25 @@ class CartViewModel(private val cartRepository: CartRepository) : ViewModel() {
      *                         this should be the current quantity of the item in the cart.
      *                         Your C# endpoint [HttpPut("remove/{userId}")] expects this in the body.
      */
-    suspend fun removeItemFromCart(productId: String, quantityToRemove: Int): Result<Unit> {
-        val authDetails = getAuthDetails()
-            ?: return Result.failure(Exception("User not authenticated or userId missing to remove item."))
-        val (bearerToken, userId) = authDetails
+    fun removeItem(productId: String, currentQuantityInCart: Int) {
+        _isLoading.value = true
+        viewModelScope.launch { // Use viewModelScope for UI-related coroutines
+            // Delegate the actual removal to the CartRepository
+            // The repository handles auth, network, and forming the specific request.
+            val result = cartRepository.removeItemFromCart(productId, currentQuantityInCart)
 
-        // This model matches the CartItemUpdateModel expected by your C# RemoveProduct endpoint
-        val removeItemRequest = CartItemUpdateRequest(productId = productId, quantity = quantityToRemove)
-
-        return withContext(Dispatchers.IO) {
-            try {
-                // Ensure apiService.removeCartItem takes (token, userId, body)
-                // and maps to [HttpPut("remove/{userId}")]
-                val response = apiService.removeCartItem(bearerToken, userId, removeItemRequest)
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data == true) { // Assuming data: true for success
-                        Result.success(Unit)
-                    } else {
-                        Result.failure(Exception(apiResponse?.systemMessage ?: "Failed to remove item (API error)"))
-                    }
-                } else {
-                    val errorBody = response.errorBody()?.string()
-                    Result.failure(Exception("Error removing item: ${response.code()} - ${response.message()}. Body: $errorBody"))
+            result.fold(
+                onSuccess = {
+                    _toastMessage.value = "Item removed successfully."
+                    loadCartItems() // Reload cart items to reflect the removal and update UI/totals
+                },
+                onFailure = { exception ->
+                    _error.value = "Failed to remove item: ${exception.message}"
+                    // Optionally, you might still call loadCartItems() to ensure UI
+                    // consistency if the backend state might have partially changed or to clear optimistic updates.
                 }
-            } catch (e: Exception) {
-                Result.failure(Exception("Network error removing item: ${e.message}", e))
-            }
+            )
+            // _isLoading.value = false; // loadCartItems() should handle setting isLoading to false
         }
     }
 

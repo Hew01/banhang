@@ -228,7 +228,7 @@ class MainViewModel : ViewModel() {
                 Log.d(TAG, "Fetching recommended products.")
                 // ADJUSTING THE EXPECTED TYPE HERE TO MATCH THE ERROR MESSAGE'S "ACTUAL" TYPE
                 val response: retrofit2.Response<List<ProductDetailsModel>> = // <--- Adjusted type
-                    apiService.getRecommendedItems()
+                    apiService.getRecommendedItems(userId = "68484aa57b44b2d92ca2018a")
 
                 if (response.isSuccessful) {
                     val productList: List<ProductDetailsModel>? = response.body()
