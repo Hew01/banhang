@@ -4,6 +4,7 @@ package com.example.banhangs.Network
 import com.example.banhangs.Model.AddToCartRequest
 import com.example.banhangs.Model.ApiCommentModel
 import com.example.banhangs.Model.CancelOrderRequest
+import com.example.banhangs.Model.CartItemData
 import com.example.banhangs.Model.CartItemUpdateRequest
 import com.example.banhangs.Model.CategoriesApiResponse
 import com.example.banhangs.Model.ChangePasswordRequest
@@ -90,30 +91,28 @@ interface ApiService {
 
     // --- Carts ---
 
-    @GET("api/Carts") // Example endpoint
-    suspend fun getCart(@Header("Authorization") token: String): Response<GenericSuccessApiResponse>
+    @GET("api/Carts/{userId}") // Example endpoint
+    suspend fun getCart(@Path("userId") userId: String): Response<ApiResponse<List<CartItemData>>>
 
-    @POST("api/Carts") // As per your specification
+    @POST("api/Carts/{userId}") // As per your specification
     suspend fun addItemToCart(
-        @Header("Authorization") token: String,
+        @Path("userId") userId: String,
         @Body itemDetails: AddToCartRequest
     ): Response<GenericSuccessApiResponse>
 
     // Example: update quantity, might be POST or PUT
-    @PUT("api/Carts") // Or use @Body if sending more data
+    @PUT("api/Carts/{userId}") // Or use @Body if sending more data
     suspend fun updateCartItemQuantity(
-        @Header("Authorization") token: String,
+        @Path("userId") userId: String,
         @Body itemUpdateRequest: CartItemUpdateRequest
     ): Response<GenericSuccessApiResponse>
 
-    @PUT("api/Carts/remove") // Example endpoint
-    suspend fun removeCartItem(
-        @Header("Authorization") token: String,
-        @Path("productId") productId: String
-    ): Response<GenericSuccessApiResponse>
+    @PUT("api/Carts/clear/{userId}") // Example endpoint
+    suspend fun clearCart(@Path("userId") userId: String,): Response<GenericSuccessApiResponse>
 
-    @PUT("api/Carts/clear") // Example endpoint
-    suspend fun clearCart(@Header("Authorization") token: String): Response<GenericSuccessApiResponse>
+    @PUT("api/Carts/remove/{userId}") // Example endpoint
+    suspend fun removeCartItem(@Path("userId") userId: String,): Response<GenericSuccessApiResponse>
+
 
     // If placeOrder and verifyAndPlaceOrder logic moves to CartRepository:
     @POST("api/orders/create")
@@ -131,7 +130,6 @@ interface ApiService {
     @GET("api/Comments/product/{id}")
     suspend fun getProductComments(
         @Path("id") productId: String,
-        @Header("Authorization") token: String? // Token is optional
     ): Response<ApiResponse<List<ApiCommentModel>>> // Assuming ApiCommentResponseModel is your detailed comment model for this response
 
     /**

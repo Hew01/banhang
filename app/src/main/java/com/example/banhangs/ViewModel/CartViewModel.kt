@@ -3,7 +3,9 @@ package com.example.banhangs.ViewModel // Or your ViewModel package
 import androidx.lifecycle.*
 import com.example.banhangs.Repository.CartRepository
 import com.example.banhangs.Model.CartItemData
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class CartViewModel(private val cartRepository: CartRepository) : ViewModel() {
 
@@ -77,27 +79,41 @@ class CartViewModel(private val cartRepository: CartRepository) : ViewModel() {
         }
     }
 
-    fun removeItem(productId: String, currentQuantityInCart: Int) {
-        // The API /api/Carts/remove takes a quantity.
-        // To remove the item entirely, we pass its current quantity.
-        _isLoading.value = true
-        viewModelScope.launch {
-            // Pass the current quantity of the item in the cart to remove all of them
-            // If your API's /api/Carts/remove means "remove this product ID regardless of quantity field",
-            // then you might pass quantity = 0 or 1. Check API spec.
-            // Assuming quantityToRemove is the number of units of that product to remove.
-            // To remove the entire line item, we need its current quantity.
-            val result = cartRepository.removeItemFromCart(productId)
-            result.fold(
-                onSuccess = {
-                    _toastMessage.value = "Item removed from cart."
-                    loadCartItems() // Reload to reflect changes
-                },
-                onFailure = { e ->
-                    _error.value = "Failed to remove item: ${e.message}"
+    /**
+     * Removes a product entirely from the cart.
+     * This calls the backend's "remove" endpoint.
+     * @param productId The ID of the product to remove.
+     * @param quantityToRemove The quantity of the item to remove. To remove the item line,
+     *                         this should be the current quantity of the item in the cart.
+     *                         Your C# endpoint [HttpPut("remove/{userId}")] expects this in the body.
+     */
+    suspend fun removeItemFromCart(productId: String, quantityToRemove: Int): Result<Unit> {
+        val authDetails = getAuthDetails()
+            ?: return Result.failure(Exception("User not authenticated or userId missing to remove item."))
+        val (bearerToken, userId) = authDetails
+
+        // This model matches the CartItemUpdateModel expected by your C# RemoveProduct endpoint
+        val removeItemRequest = CartItemUpdateRequest(productId = productId, quantity = quantityToRemove)
+
+        return withContext(Dispatchers.IO) {
+            try {
+                // Ensure apiService.removeCartItem takes (token, userId, body)
+                // and maps to [HttpPut("remove/{userId}")]
+                val response = apiService.removeCartItem(bearerToken, userId, removeItemRequest)
+                if (response.isSuccessful) {
+                    val apiResponse = response.body()
+                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data == true) { // Assuming data: true for success
+                        Result.success(Unit)
+                    } else {
+                        Result.failure(Exception(apiResponse?.systemMessage ?: "Failed to remove item (API error)"))
+                    }
+                } else {
+                    val errorBody = response.errorBody()?.string()
+                    Result.failure(Exception("Error removing item: ${response.code()} - ${response.message()}. Body: $errorBody"))
                 }
-            )
-            // No need to set isLoading to false here if loadCartItems() does it
+            } catch (e: Exception) {
+                Result.failure(Exception("Network error removing item: ${e.message}", e))
+            }
         }
     }
 
