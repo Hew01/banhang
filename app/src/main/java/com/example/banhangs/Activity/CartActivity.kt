@@ -22,23 +22,28 @@ import com.example.banhangs.databinding.ActivityCartBinding
 import com.example.banhangs.Model.VNPayModel // Your simple VNPayModel
 import com.example.banhangs.Network.ApiService // Your Retrofit ApiService
 import com.example.banhangs.Network.RetrofitClient // Or your way to get ApiService instance
+import com.example.banhangs.Repository.UserPreferencesRepository
 import com.example.banhangs.Utilities.VNPayUtils
 import kotlinx.coroutines.launch // For coroutines
 import java.net.InetAddress
 import java.text.NumberFormat
 import java.util.Locale
-import java.util.TreeMap // For sorting params for VNPay if not done in VNPayUtils
 
 class CartActivity : BaseActivity() {
 
     private lateinit var binding: ActivityCartBinding
     private lateinit var cartAdapter: CartAdapter
 
+    private lateinit var userPreferencesRepository: UserPreferencesRepository
+
     // Setup for API backend
     private val apiService: ApiService by lazy { RetrofitClient.instance } // Or your DI method
-    private val cartRepository: CartRepository by lazy { CartRepository(apiService) }
+    private val cartRepository: CartRepository by lazy {
+        // Ensure userPreferencesRepository is initialized before this lazy block is executed for the first time
+        CartRepository(apiService, userPreferencesRepository)
+    }
     private val viewModel: CartViewModel by viewModels {
-        CartViewModelFactory(cartRepository)
+        CartViewModelFactory(application)
     }
 
     private var taxRate: Double = 0.02 // Example tax rate (2%)
@@ -49,6 +54,8 @@ class CartActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityCartBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        userPreferencesRepository = UserPreferencesRepository(applicationContext)
 
         // StrictMode for network calls on main thread (VNPay SDK might do this, or some older IP address logic)
         // Ideally, all network calls (including getIpAddress if it involves network) should be off the main thread.

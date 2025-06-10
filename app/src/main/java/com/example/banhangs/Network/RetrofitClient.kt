@@ -19,7 +19,7 @@ object RetrofitClient { // Or class RetrofitClient, depending on your preference
     }
 
     private const val BASE_URL = "https://techstoreapi-35j6.onrender.com/" // <<<< IMPORTANT
-
+//    private const val BASE_URL = "https://10.0.2.2:7243/"
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY // Or NONE for production
     }

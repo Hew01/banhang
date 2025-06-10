@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.banhangs.Activity.DetailActivity
+import com.example.banhangs.Helper.formatNumberToShortForm
 import com.example.banhangs.Model.ProductDetailsModel
 import com.example.banhangs.databinding.ViewholderListItemBinding
 
@@ -30,7 +31,7 @@ class ListItemsAdapter (val items: MutableList<ProductDetailsModel>) :
 
         with(holder.binding) {
             titleTxt.text = item.name
-            priceTxt.text = "$${item.price}"
+            priceTxt.text = "$${formatNumberToShortForm(item.price)}"
             ratingTxt.text = item.averageRating.toString()
 
             // Kiểm tra nếu picUrl không rỗng để tránh lỗi

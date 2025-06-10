@@ -63,7 +63,7 @@ class CartViewModel(private val cartRepository: CartRepository) : ViewModel() {
         }
         _isLoading.value = true
         viewModelScope.launch {
-            val result = cartRepository.updateCartItemQuantity(productId, newQuantity)
+            val result = cartRepository.updateItemQuantity(productId, newQuantity)
             result.fold(
                 onSuccess = {
                     _toastMessage.value = "Cart updated."
@@ -87,7 +87,7 @@ class CartViewModel(private val cartRepository: CartRepository) : ViewModel() {
             // then you might pass quantity = 0 or 1. Check API spec.
             // Assuming quantityToRemove is the number of units of that product to remove.
             // To remove the entire line item, we need its current quantity.
-            val result = cartRepository.removeProductFromCart(productId, currentQuantityInCart)
+            val result = cartRepository.removeItemFromCart(productId)
             result.fold(
                 onSuccess = {
                     _toastMessage.value = "Item removed from cart."
@@ -137,16 +137,5 @@ class CartViewModel(private val cartRepository: CartRepository) : ViewModel() {
 
     fun onErrorShown() {
         _error.value = null
-    }
-}
-
-// ViewModelFactory for CartViewModel
-class CartViewModelFactory(private val cartRepository: CartRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(CartViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return CartViewModel(cartRepository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

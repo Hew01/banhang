@@ -79,8 +79,6 @@ data class UserInformationRequest( // Part of RegisterRequest
     @SerializedName("lastName")
     val lastName: String,
 
-    @SerializedName("email")
-    val email: String,
 
     // IMPORTANT: Clients should NEVER send passwordHash.
     // The server should generate the hash from the plain password.
@@ -119,6 +117,14 @@ data class RegisterResponseData( // The "data" object within RegisterResponse
     @SerializedName("userId")
     val userId: String
 )
+
+@Parcelize
+data class ChangePasswordRequest(
+    @SerializedName("currentPassword")
+    val currentPassword: String,
+    @SerializedName("newPassword")
+    val newPassword: String
+) : Parcelable
 
 // Specific type alias for Register Response
 typealias RegisterApiResponse = ApiResponse<RegisterResponseData>

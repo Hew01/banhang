@@ -1,150 +1,149 @@
-package com.example.banhangs.Repository // Or your chosen repository package
+package com.example.banhangs.Repository
 
-import com.example.banhangs.Model.* // Import your models including ProductDetailsModel
-import com.example.banhangs.Network.ApiService // Your Retrofit ApiService interface
+// Correctly import UserPreferencesRepository if it's in the same package or add full path
+// Assuming UserPreferencesRepository is in com.example.banhangs.Repository
+// Use the CartItemData from your Model file
+import com.example.banhangs.Model.AddToCartRequest
+import com.example.banhangs.Model.CartItemData
+// Assuming your API returns a structure like ApiResponse<List<CartItemData>> for getCart
+import com.example.banhangs.Model.CartApiResponse // Your typealias for ApiResponse<List<CartItemData>>
+// Generic API response for updates/removals
+import com.example.banhangs.Model.GenericSuccessApiResponse // Your typealias for ApiResponse<Boolean> or similar for success
+import com.example.banhangs.Network.ApiService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 
-// Result class for handling success/failure, common in Kotlin
-// You might already have a similar sealed class or can use a simple one like this.
-// sealed class Result<out T> {
-//     data class Success<out T>(val data: T) : Result<T>()
-//     data class Error(val exception: Exception) : Result<Nothing>()
-// }
-// For simplicity, I'll use Kotlin's built-in Result type (kotlin.Result)
+class CartRepository(
+    private val apiService: ApiService,
+    private val userPreferencesRepository: UserPreferencesRepository
+) {
 
-class CartRepository(private val apiService: ApiService) {
+    private suspend fun getAuthToken(): String? {
+        // Assuming getUserToken() in UserPreferencesRepository returns a Flow<String?>
+        // If it's a suspend fun returning String?, then just call it directly.
+        return userPreferencesRepository.getUserToken()
+    }
 
-    /**
-     * Fetches all items currently in the user's cart from the API.
-     */
     suspend fun getCartItems(): Result<List<CartItemData>> {
-        return withContext(Dispatchers.IO) { // Perform network call on IO dispatcher
+        val token = getAuthToken()
+        if (token.isNullOrEmpty()) { // Check for null or empty
+            return Result.failure(Exception("User not authenticated to fetch cart."))
+        }
+        return withContext(Dispatchers.IO) {
             try {
-                val response = apiService.getCartItems() // Assumes getCartItems() is defined in ApiService
+                val response = apiService.getCart("Bearer $token")
                 if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data != null) {
-                        Result.success(apiResponse.data)
+                    val cartApiResponse = response.body()
+                    // Check against your CartApiResponse structure
+                    if (cartApiResponse != null && cartApiResponse.retCode == 0 && cartApiResponse.data != null) {
+                        Result.success(cartApiResponse.data) // data is List<CartItemData>
                     } else {
-                        val errorMessage = "Failed to get cart items: API Error - RetCode: ${apiResponse?.retCode}, Message: ${apiResponse?.systemMessage ?: response.message()}"
-                        Result.failure(Exception(errorMessage))
+                        Result.failure(Exception(cartApiResponse?.systemMessage ?: "Failed to fetch cart items"))
                     }
                 } else {
-                    Result.failure(Exception("Failed to get cart items: Network Error - Code: ${response.code()}, Message: ${response.message()}"))
+                    Result.failure(Exception("Error fetching cart: ${response.code()} - ${response.message()}"))
                 }
             } catch (e: Exception) {
-                Result.failure(Exception("Failed to get cart items: Exception - ${e.message}", e))
+                Result.failure(Exception("Network error fetching cart: ${e.message}", e))
+            } as Result<List<CartItemData>>
+        }
+    }
+
+    suspend fun addItemToCart(productId: String, quantity: Int): Result<Unit> {
+        val token = getAuthToken()
+        if (token.isNullOrEmpty()) {
+            // Corresponds to "424 FailedDependency if user not authenticated"
+            return Result.failure(Exception("User not authenticated. (Status Code: 424 expected)"))
+        }
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val itemDetails = AddToCartRequest(productId = productId, quantity = quantity)
+                val response = apiService.addItemToCart("Bearer $token", itemDetails)
+
+                if (response.isSuccessful) {
+                    val apiResponse = response.body()
+                    // Success: "200 OK"
+                    // Failure: "200 OK with NoExitData if operation fails" (means retCode != 0 or data is false/null)
+                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data == true) {
+                        Result.success(Unit)
+                    } else {
+                        Result.failure(Exception(apiResponse?.systemMessage ?: "Failed to add item to cart. (NoExitData)"))
+                    }
+                } else {
+                    // Handle other HTTP error codes if necessary, though your spec focuses on 200 OK
+                    Result.failure(Exception("Error adding item to cart: ${response.code()} - ${response.message()}"))
+                }
+            } catch (e: Exception) {
+                Result.failure(Exception("Network error adding item to cart: ${e.message}", e))
             }
         }
     }
 
-    /**
-     * Adds a specified quantity of a product to the user's cart.
-     * @param product The ProductDetailsModel of the item to add.
-     * @param quantity The number of items to add.
-     */
-    suspend fun addToCart(product: ProductDetailsModel, quantity: Int): Result<Boolean> {
+    suspend fun updateItemQuantity(productId: String, newQuantity: Int): Result<Unit> {
+        val token = getAuthToken()
+        if (token.isNullOrEmpty()) return Result.failure(Exception("User not authenticated."))
+
         return withContext(Dispatchers.IO) {
             try {
-                val request = AddToCartRequest(
-                    productId = product.productId,
-                    quantity = quantity
-                )
-                val response = apiService.addToCart(request) // Assumes addToCart() is defined in ApiService
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data == true) {
-                        Result.success(true)
-                    } else {
-                        val errorMessage = "Failed to add to cart: API Error - RetCode: ${apiResponse?.retCode}, Message: ${apiResponse?.systemMessage ?: response.message()}"
-                        Result.failure(Exception(errorMessage))
-                    }
+                // Assuming your apiService.updateCartItemQuantity expects a token, productId, and newQuantity
+                // And returns a Response<GenericSuccessApiResponse> or similar
+                val response = apiService.updateCartItemQuantity("Bearer $token", productId, newQuantity)
+
+                if (response.isSuccessful && response.body()?.retCode == 0) {
+                    // If your GenericSuccessApiResponse's data field is Boolean, you might check response.body()?.data == true
+                    Result.success(Unit)
                 } else {
-                    Result.failure(Exception("Failed to add to cart: Network Error - Code: ${response.code()}, Message: ${response.message()}"))
+                    Result.failure(Exception(response.body()?.systemMessage ?: "Failed to update quantity"))
                 }
             } catch (e: Exception) {
-                Result.failure(Exception("Failed to add to cart: Exception - ${e.message}", e))
+                Result.failure(Exception("Network error updating quantity: ${e.message}", e))
             }
         }
     }
 
-    /**
-     * Updates the quantity of a specific product in the cart.
-     * @param productId The ID of the product to update.
-     * @param newQuantity The new quantity for the product.
-     */
-    suspend fun updateCartItemQuantity(productId: String, newQuantity: Int): Result<Boolean> {
+    suspend fun removeItemFromCart(productId: String): Result<Unit> {
+        val token = getAuthToken()
+        if (token.isNullOrEmpty()) return Result.failure(Exception("User not authenticated."))
+
         return withContext(Dispatchers.IO) {
             try {
-                val request = UpdateCartItemQuantityRequest(productId, newQuantity)
-                val response = apiService.updateCartItemQuantity(request) // Assumes updateCartItemQuantity() is defined
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data == true) {
-                        Result.success(true)
-                    } else {
-                        val errorMessage = "Failed to update cart quantity: API Error - RetCode: ${apiResponse?.retCode}, Message: ${apiResponse?.systemMessage ?: response.message()}"
-                        Result.failure(Exception(errorMessage))
-                    }
+                // Assuming your apiService.removeCartItem expects token and productId
+                // And returns a Response<GenericSuccessApiResponse> or similar
+                val response = apiService.removeCartItem("Bearer $token", productId)
+                if (response.isSuccessful && response.body()?.retCode == 0) {
+                    Result.success(Unit)
                 } else {
-                    Result.failure(Exception("Failed to update cart quantity: Network Error - Code: ${response.code()}, Message: ${response.message()}"))
+                    Result.failure(Exception(response.body()?.systemMessage ?: "Failed to remove item"))
                 }
             } catch (e: Exception) {
-                Result.failure(Exception("Failed to update cart quantity: Exception - ${e.message}", e))
+                Result.failure(Exception("Network error removing item: ${e.message}", e))
             }
         }
     }
 
-    /**
-     * Removes a specified quantity of a product from the cart.
-     * Based on your API spec for /api/Carts/remove.
-     * @param productId The ID of the product to remove.
-     * @param quantityToRemove The quantity of the product to remove.
-     */
-    suspend fun removeProductFromCart(productId: String, quantityToRemove: Int): Result<Boolean> {
+    suspend fun clearCart(): Result<Unit> {
+        val token = getAuthToken()
+        if (token.isNullOrEmpty()) return Result.failure(Exception("User not authenticated."))
         return withContext(Dispatchers.IO) {
             try {
-                val request = RemoveProductFromCartRequest(productId, quantityToRemove)
-                val response = apiService.removeProductFromCart(request) // Assumes removeProductFromCart() is defined
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data == true) {
-                        Result.success(true)
-                    } else {
-                        val errorMessage = "Failed to remove product from cart: API Error - RetCode: ${apiResponse?.retCode}, Message: ${apiResponse?.systemMessage ?: response.message()}"
-                        Result.failure(Exception(errorMessage))
-                    }
+                // Assuming your apiService.clearCart expects only the token
+                // And returns a Response<GenericSuccessApiResponse> or similar
+                val response = apiService.clearCart("Bearer $token")
+                if (response.isSuccessful && response.body()?.retCode == 0) {
+                    Result.success(Unit)
                 } else {
-                    Result.failure(Exception("Failed to remove product from cart: Network Error - Code: ${response.code()}, Message: ${response.message()}"))
+                    Result.failure(Exception(response.body()?.systemMessage ?: "Failed to clear cart"))
                 }
             } catch (e: Exception) {
-                Result.failure(Exception("Failed to remove product from cart: Exception - ${e.message}", e))
+                Result.failure(Exception("Network error clearing cart: ${e.message}", e))
             }
         }
     }
 
-    /**
-     * Clears all items from the user's cart.
-     */
-    suspend fun clearCart(): Result<Boolean> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = apiService.clearCart() // Assumes clearCart() is defined in ApiService
-                if (response.isSuccessful) {
-                    val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data == true) {
-                        Result.success(true)
-                    } else {
-                        val errorMessage = "Failed to clear cart: API Error - RetCode: ${apiResponse?.retCode}, Message: ${apiResponse?.systemMessage ?: response.message()}"
-                        Result.failure(Exception(errorMessage))
-                    }
-                } else {
-                    Result.failure(Exception("Failed to clear cart: Network Error - Code: ${response.code()}, Message: ${response.message()}"))
-                }
-            } catch (e: Exception) {
-                Result.failure(Exception("Failed to clear cart: Exception - ${e.message}", e))
-            }
-        }
-    }
+    // The placeOrder and verifyAndPlaceOrder logic remains outside this repository for now,
+    // as it's currently in your CartActivity.
+    // If you decide to move them here, you would define OrderRequest and OrderConfirmation/Response models
+    // and use the getAuthToken() method similarly.
 }

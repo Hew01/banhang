@@ -187,7 +187,7 @@ class DetailViewModel @OptIn(UnstableApi::class) constructor
         _isLoadingProduct.value = true // Or a general isLoading
         viewModelScope.launch {
             // Pass currentProduct.productId or viewModelProductId
-            val result = cartRepository.addToCart(currentProduct, quantity)
+            val result = cartRepository.addItemToCart(currentProduct.productId, quantity)
             result.fold(
                 onSuccess = {
                     _toastMessage.value = "${currentProduct.name} added to cart!"

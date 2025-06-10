@@ -6,6 +6,7 @@ import com.example.banhangs.Model.ApiCommentModel
 import com.example.banhangs.Model.CartApiResponse
 import com.example.banhangs.Model.CategoriesApiResponse
 import com.example.banhangs.Model.CategoryModel
+import com.example.banhangs.Model.ChangePasswordRequest
 import com.example.banhangs.Model.CommentModel
 import com.example.banhangs.Model.CommentsListApiResponse
 import com.example.banhangs.Model.GenericSuccessApiResponse
@@ -13,6 +14,8 @@ import com.example.banhangs.Model.ProductDetailsModel
 import com.example.banhangs.Model.LoginApiResponse
 import com.example.banhangs.Model.LoginRequest
 import com.example.banhangs.Model.OrdersApiResponse
+import com.example.banhangs.Model.PlaceOrderRequest
+import com.example.banhangs.Model.PlaceOrderResponseData
 import com.example.banhangs.Model.PostCommentRequest
 import com.example.banhangs.Model.ProductDetailsApiResponse
 import com.example.banhangs.Model.ProductsByCategoryApiResponse
@@ -22,6 +25,8 @@ import com.example.banhangs.Model.RegisterRequest
 import com.example.banhangs.Model.RemoveProductFromCartRequest
 import com.example.banhangs.Model.SliderModel
 import com.example.banhangs.Model.UpdateCartItemQuantityRequest
+import com.example.banhangs.Model.UserData
+import com.example.banhangs.Model.UserInformationRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -83,20 +88,40 @@ interface ApiService {
     ): Response<CommentModel> // Or whatever your API returns for a new comment
 
     // --- Carts ---
-    @GET("api/Carts")
-    suspend fun getCartItems(): Response<CartApiResponse> // CartApiResponse uses List<CartItemData>
 
-    @POST("api/Carts")
-    suspend fun addToCart(@Body addToCartRequest: AddToCartRequest): Response<GenericSuccessApiResponse>
+    @GET("api/Carts") // Example endpoint
+    suspend fun getCart(@Header("Authorization") token: String): Response<GenericSuccessApiResponse>
 
-    @PUT("api/Carts/clear")
-    suspend fun clearCart(): Response<GenericSuccessApiResponse>
+    @POST("api/Carts") // As per your specification
+    suspend fun addItemToCart(
+        @Header("Authorization") token: String,
+        @Body itemDetails: AddToCartRequest
+    ): Response<GenericSuccessApiResponse>
 
-    @PUT("api/Carts/remove") // To remove a specific quantity or the entire product if quantity matches current
-    suspend fun removeProductFromCart(@Body removeProductFromCartRequest: RemoveProductFromCartRequest): Response<GenericSuccessApiResponse>
+    // Example: update quantity, might be POST or PUT
+    @PUT("api/Carts") // Or use @Body if sending more data
+    suspend fun updateCartItemQuantity(
+        @Header("Authorization") token: String,
+        @Path("productId") productId: String,
+        @Query("quantity") newQuantity: Int // Or send as part of a request body
+    ): Response<GenericSuccessApiResponse> // Generic success/failure response
 
-    @PUT("api/Carts") // To update the quantity of a specific product
-    suspend fun updateCartItemQuantity(@Body updateCartItemQuantityRequest: UpdateCartItemQuantityRequest): Response<GenericSuccessApiResponse>
+    @DELETE("api/Carts/remove") // Example endpoint
+    suspend fun removeCartItem(
+        @Header("Authorization") token: String,
+        @Path("productId") productId: String
+    ): Response<GenericSuccessApiResponse>
+
+    @DELETE("api/Carts/clear") // Example endpoint
+    suspend fun clearCart(@Header("Authorization") token: String): Response<GenericSuccessApiResponse>
+
+    // If placeOrder and verifyAndPlaceOrder logic moves to CartRepository:
+    @POST("api/orders/create")
+    suspend fun createOrder(
+        @Header("Authorization") token: String,
+        @Body orderRequest: PlaceOrderRequest // Define OrderRequest model
+    ): Response<PlaceOrderResponseData> // Define OrderConfirmation model
+
 
     @GET("api/products/{productId}/comments") // Example endpoint
     suspend fun getProductComments(@Path("productId") productId: String): Response<CommentsListApiResponse>
@@ -110,4 +135,23 @@ interface ApiService {
 
     @GET("api/Orders")
     suspend fun getOrders(@Header("Authorization") token: String): Response<OrdersApiResponse>
+
+    @GET("api/Users/{id}") // Endpoint to get user details by ID
+    suspend fun getUserDetails(
+        @Header("Authorization") token: String, // Assuming this endpoint also requires auth
+        @Path("id") userId: String
+    ): Response<ApiResponse<UserData>> // Or Response<UserData> if API returns it directly
+
+    @PUT("api/Users/update-information/{id}")
+    suspend fun updateUserDetails(
+        @Header("Authorization") token: String, // Add if endpoint requires auth, though description says not
+        @Path("id") userId: String,
+        @Body userUpdateRequest: UserInformationRequest
+    ): Response<GenericSuccessApiResponse>
+
+    @PUT("api/Users/change-password")
+    suspend fun changePassword(
+        @Header("Authorization") token: String, // JWT token is required
+        @Body changePasswordRequest: ChangePasswordRequest
+    ): Response<GenericSuccessApiResponse>
 }

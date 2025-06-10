@@ -17,7 +17,8 @@
     <color name="background_color_light_gray">#F5F5F5</color>
     <color name="text_primary_color">#212121</color>
     <color name="text_secondary_color">#757575</color>
-
+        <color name="blue">#2196F3</color>   <!-- A standard blue -->
+        <color name="red">#F44336</color>     <!-- A standard red --><!-- A light grey for the EditText border -->
     <color name="status_pending_bg">#FFF3E0</color> <!-- Light Orange -->
     <color name="status_pending_text">#E65100</color> <!-- Dark Orange -->
     <color name="status_processing_bg">#E3F2FD</color> <!-- Light Blue -->

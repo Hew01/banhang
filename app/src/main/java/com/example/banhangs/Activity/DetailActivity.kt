@@ -11,6 +11,7 @@ import com.bumptech.glide.Glide
 import com.example.banhangs.Adapter.CommentAdapter // You'll need to adapt this for ApiCommentModel
 import com.example.banhangs.Adapter.PicAdapter
 import com.example.banhangs.Adapter.SelectedModelAdapter
+import com.example.banhangs.Helper.formatNumberToShortForm
 // Import your repositories, ViewModel, ViewModelFactory, and new ApiCommentModel
 import com.example.banhangs.R
 import com.example.banhangs.Repository.CartRepository
@@ -22,6 +23,7 @@ import com.example.banhangs.Model.ApiCommentModel // Use the new API comment mod
 import com.example.banhangs.Model.ProductDetailsModel
 import com.example.banhangs.Network.ApiService
 import com.example.banhangs.Network.RetrofitClient
+import com.example.banhangs.Repository.UserPreferencesRepository
 
 private val TAG_ACTIVITY = "DetailActivity_Observe"
 
@@ -29,10 +31,12 @@ class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common 
 
     private lateinit var binding: ActivityDetailBinding
     private lateinit var currentItemId: String // Product ID, ensure this is correctly passed and retrieved
+    private lateinit var userPreferencesRepository: UserPreferencesRepository
+
 
     // Lazily initialize repositories (or use Hilt/Koin for DI)
     private val apiService: ApiService by lazy { RetrofitClient.instance } // Example: Get ApiService instance
-    private val cartRepository by lazy { CartRepository(apiService) }
+    private val cartRepository by lazy { CartRepository(apiService, userPreferencesRepository) }
     private val productRepository by lazy { ProductRepository(apiService) }
 
     private val viewModel: DetailViewModel by viewModels {
@@ -51,6 +55,8 @@ class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common 
         super.onCreate(savedInstanceState)
         binding = ActivityDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        userPreferencesRepository = UserPreferencesRepository(applicationContext)
 
         val receivedItem = intent.getParcelableExtra<ProductDetailsModel>("object")
         val receivedItemIdString = intent.getStringExtra("itemKey")
@@ -139,7 +145,7 @@ class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common 
             Log.i("DetailActivity", "updateProductUI called with product: ${currentProduct.name}")
             binding.titleTxt.text = currentProduct.name
             binding.derscriptionTxt.text = currentProduct.description ?: "No description available."
-            binding.priceTxt.text = "$${currentProduct.price}" // Format as needed
+            binding.priceTxt.text = "$${formatNumberToShortForm(currentProduct.price)}" // Format as needed
             binding.raitingTxt.text = "${currentProduct.averageRating ?: 0.0} Rating"
 
             if (!currentProduct.categoryName.isNullOrBlank()) {
