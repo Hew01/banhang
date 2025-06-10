@@ -6,7 +6,6 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels // For by viewModels()
-import androidx.compose.ui.semantics.text
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.example.banhangs.Adapter.CommentAdapter // You'll need to adapt this for ApiCommentModel
@@ -24,10 +23,11 @@ import com.example.banhangs.Model.ProductDetailsModel
 import com.example.banhangs.Network.ApiService
 import com.example.banhangs.Network.RetrofitClient
 
+private val TAG_ACTIVITY = "DetailActivity_Observe"
+
 class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common setup
 
     private lateinit var binding: ActivityDetailBinding
-    private lateinit var item: ProductDetailsModel // This is the product being displayed
     private lateinit var currentItemId: String // Product ID, ensure this is correctly passed and retrieved
 
     // Lazily initialize repositories (or use Hilt/Koin for DI)
@@ -61,18 +61,18 @@ class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common 
             return // Exit early
         }
 
-        item = receivedItem
         currentItemId = receivedItemIdString
-        Log.d("DetailActivity", "Received item: ${item.name}, itemId: $currentItemId")
+        Log.d("DetailActivity", "Received item: ${receivedItem.name}, itemId: $currentItemId")
 
         // Pass the initially loaded item to the ViewModel
         // This assumes 'item' is the full ProductDetailsModel.
         // If 'item' is a summary and 'itemId' is used to fetch full details,
         // then the ViewModel would handle fetching product details.
-        viewModel.setInitialProductData(item)
+        viewModel.setInitialProductData(receivedItem)
 
 
-        setupUI()
+        updateProductUI(receivedItem)
+        setupEventHandlersAndAdapters()
         setupCommentRecyclerView()
         observeViewModel()
 
@@ -93,101 +93,72 @@ class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common 
         // viewModel.loadComments()
     }
 
-    private fun setupUI() {
-        binding.titleTxt.text = item.name // Assuming 'name' from ProductDetailsModel
-        binding.derscriptionTxt.text = item.description
-        binding.priceTxt.text = "$${item.price}"
-        binding.raitingTxt.text = "${item.averageRating ?: 0.0} Rating" // Use averageRating
-
-        // Image loading (Picasso/Glide for main image and picList)
-        val picList = ArrayList<String>().apply { item.galleryImageUrls?.let { addAll(it) } }
-        if (picList.isNotEmpty()) {
-            Glide.with(this).load(picList[0]).into(binding.img)
-        } else if (!item.mainImageUrl.isNullOrEmpty()) {
-            Glide.with(this).load(item.mainImageUrl).into(binding.img)
-        } else {
-            binding.img.setImageResource(R.drawable.ic_placeholder) // Set a placeholder
-        }
-
-
-        binding.picList.adapter = PicAdapter(picList) { selectedImageUrl ->
-            Glide.with(this).load(selectedImageUrl).into(binding.img)
-        }
-        binding.picList.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-
-        // Model list (if this is still relevant, e.g., product variants)
-        // val modelList = ArrayList<String>().apply { addAll(item.model) } // Assuming 'model' is a property
-        // binding.modelList.adapter = SelectedModelAdapter(modelList)
-        // binding.modelList.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        // If 'modelList' is not part of ProductDetailsModel, remove or adapt this.
-        // For now, I'll hide it if 'model' isn't a direct property of ProductDetailsModel
-        // binding.modelList.visibility = View.GONE // Or handle appropriately
-
-
+    private fun setupEventHandlersAndAdapters() {
         // --- Event Listeners ---
-        binding.addToCartBtn.setOnClickListener {
-            // numberOrder should ideally be from a quantity selector UI element
-            // For now, using the class variable 'numberOrder'
-            viewModel.addToCart(item, numberOrder)
-        }
-
-        binding.submitCommentBtn.setOnClickListener {
-            val commentText = binding.commentInput.text.toString().trim()
-            if (commentText.isNotEmpty()) {
-                viewModel.postComment(commentText) // Rating is optional in ViewModel
-                binding.commentInput.text.clear() // Clear input after attempting to post
-            } else {
-                Toast.makeText(this, "Please enter your comment.", Toast.LENGTH_SHORT).show()
-            }
-        }
-
         binding.backBtn.setOnClickListener { finish() }
         binding.cartBtn.setOnClickListener {
             startActivity(Intent(this, CartActivity::class.java))
         }
 
-// Example: Quantity selector (if you add one)
-// binding.plusBtn.setOnClickListener { numberOrder++; binding.quantityTxt.text = numberOrder.toString() }
-// binding.minusBtn.setOnClickListener { if (numberOrder > 1) { numberOrder--; binding.quantityTxt.text = numberOrder.toString() } }
+        binding.addToCartBtn.setOnClickListener {
+            viewModel.productDetails.value?.let { currentProduct ->
+                viewModel.addToCart(currentProduct, numberOrder)
+            } ?: run {
+                // Fallback: If productDetails is null, try using the initially passed item
+                // This situation should be rare if setInitialProductData and observers are working.
+                val initialItemFromIntent = intent.getParcelableExtra<ProductDetailsModel>("object")
+                initialItemFromIntent?.let {
+                    Log.w("DetailActivity", "addToCart using initial item from intent as fallback.")
+                    viewModel.addToCart(it, numberOrder)
+                } ?: Toast.makeText(this, "Product details not available to add to cart.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        binding.submitCommentBtn.setOnClickListener {
+            val commentText = binding.commentInput.text.toString().trim()
+            if (commentText.isNotEmpty()) {
+                viewModel.postComment(commentText)
+                binding.commentInput.text.clear()
+            } else {
+                Toast.makeText(this, "Please enter your comment.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Example: Quantity selector (if you add one)
+        // binding.plusBtn.setOnClickListener { numberOrder++; binding.quantityTxt.text = numberOrder.toString() }
+        // binding.minusBtn.setOnClickListener { if (numberOrder > 1) { numberOrder--; binding.quantityTxt.text = numberOrder.toString() } }
+
+        // Initialize PicAdapter for the product image gallery (if it's static or updated in updateProductUI)
+        // If picList is dynamic based on productDetails, its adapter setup/update should be in updateProductUI
+        binding.picList.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        // The adapter for picList will be set in updateProductUI since picList data comes from ProductDetailsModel
     }
 
-    private fun setupCommentRecyclerView() {
-        commentAdapter = CommentAdapter(ArrayList()) // Initialize with an empty list
-        binding.modelComment.apply {
-            layoutManager = LinearLayoutManager(this@DetailActivity)
-            adapter = commentAdapter
-            // isNestedScrollingEnabled = false // Consider if inside a ScrollView and needs to expand
-        }
-    }
     private fun updateProductUI(product: ProductDetailsModel?) {
         product?.let { currentProduct ->
-            Log.d("DetailActivity", "Updating UI with product: ${currentProduct.name}")
+            Log.i("DetailActivity", "updateProductUI called with product: ${currentProduct.name}")
             binding.titleTxt.text = currentProduct.name
-            binding.derscriptionTxt.text = currentProduct.description ?: "No description."
-            binding.priceTxt.text = "$${currentProduct.price}"
+            binding.derscriptionTxt.text = currentProduct.description ?: "No description available."
+            binding.priceTxt.text = "$${currentProduct.price}" // Format as needed
             binding.raitingTxt.text = "${currentProduct.averageRating ?: 0.0} Rating"
 
-            // SET THE CATEGORY NAME HERE
             if (!currentProduct.categoryName.isNullOrBlank()) {
                 binding.categoryNameTxt.text = currentProduct.categoryName
-                binding.categoryNameTxt.visibility = View.VISIBLE // Make sure it's visible
-                // If you have a LinearLayout wrapper for label + value, make that visible
+                binding.categoryNameTxt.visibility = View.VISIBLE
             } else {
-                binding.categoryNameTxt.text = "N/A" // Or hide it
-                // binding.categoryNameTxt.visibility = View.GONE
-                // Or hide the parent LinearLayout if you have one for label + value
+                binding.categoryNameTxt.text = "N/A"
+                // Consider hiding if N/A: binding.categoryNameTxt.visibility = View.GONE
             }
 
-            // ... (rest of your image loading and other UI updates) ...
-
             val picList = ArrayList<String>()
-            currentProduct.galleryImageUrls?.let { picList.addAll(it) }
+            currentProduct.galleryImageUrls?.let { urls -> picList.addAll(urls) }
 
             if (picList.isNotEmpty()) {
                 Glide.with(this).load(picList[0])
                     .placeholder(R.drawable.ic_placeholder)
                     .error(R.drawable.ic_error_placeholder)
                     .into(binding.img)
+                // Set or update the adapter for the picture list
                 binding.picList.adapter = PicAdapter(picList) { selectedImageUrl ->
                     Glide.with(this).load(selectedImageUrl)
                         .placeholder(R.drawable.ic_placeholder)
@@ -202,34 +173,47 @@ class DetailActivity : BaseActivity() { // Assuming BaseActivity handles common 
                     .into(binding.img)
                 binding.picList.visibility = View.GONE // Hide picList if only main image
             } else {
-                binding.img.setImageResource(R.drawable.ic_placeholder) // Placeholder if no images
+                binding.img.setImageResource(R.drawable.ic_placeholder)
                 binding.picList.visibility = View.GONE
             }
+            // Ensure description visibility is also handled
             binding.derscriptionTxt.visibility = if (currentProduct.description.isNullOrBlank()) View.GONE else View.VISIBLE
 
         } ?: run {
-            Log.d("DetailActivity", "Product details are null, cannot update UI fully.")
-            // Potentially clear or hide fields if product is null
-            binding.titleTxt.text = "Error"
-            binding.derscriptionTxt.text = "Could not load product details."
+            // Handle case where product is null (e.g., after an error or if initial data was null)
+            Log.w("DetailActivity", "updateProductUI called with null product. Clearing UI fields.")
+            binding.titleTxt.text = "Product Not Available"
+            binding.derscriptionTxt.text = ""
             binding.priceTxt.text = ""
             binding.raitingTxt.text = ""
-            binding.categoryNameTxt.text = "" // Clear category too
-            binding.img.setImageResource(R.drawable.ic_error_placeholder)
+            binding.categoryNameTxt.text = ""
+            binding.img.setImageResource(R.drawable.ic_error_placeholder) // Show an error placeholder
+            binding.picList.adapter = null // Clear the adapter
+            binding.picList.visibility = View.GONE
+            binding.derscriptionTxt.visibility = View.GONE
+            binding.categoryNameTxt.visibility = View.GONE
+            // You might want to show a specific error message to the user here
         }
     }
 
+    private fun setupCommentRecyclerView() {
+        commentAdapter = CommentAdapter(ArrayList()) // Initialize with an empty list
+        binding.modelComment.apply {
+            layoutManager = LinearLayoutManager(this@DetailActivity)
+            adapter = commentAdapter
+            // isNestedScrollingEnabled = false // Consider if inside a ScrollView and needs to expand
+        }
+    }
 
     private fun observeViewModel() {
+        Log.d(TAG_ACTIVITY, "Setting up ViewModel observers.")
         viewModel.productDetails.observe(this) { product ->
-            // This is useful if ViewModel fetches/updates product details.
-            // For now, we set it initially. If it changes, update UI here.
-            // e.g., if stock changes after an attempted cart add.
-            product?.let {
-                // Update UI elements if they can change dynamically based on ViewModel
-                // binding.titleTxt.text = it.name
-                // binding.priceTxt.text = "$${it.price}"
-                // ...
+            if (product != null) {
+                Log.i(TAG_ACTIVITY, "productDetails LiveData observed. Product Name: ${product.name}. Calling updateProductUI.")
+                updateProductUI(product) // <<<<<<----- THIS IS THE CRUCIAL FIX
+            } else {
+                Log.w(TAG_ACTIVITY, "productDetails LiveData observed with a null product. UI will be updated to reflect this.")
+                updateProductUI(null) // Update UI to show "not available" or clear fields
             }
         }
 

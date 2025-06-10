@@ -13,6 +13,8 @@ import kotlin.text.fold
 import kotlin.text.isBlank
 import kotlin.text.isNotBlank
 
+private const val TAG = "DetailViewModel_Product"
+
 class DetailViewModel @OptIn(UnstableApi::class) constructor
     (
     private val cartRepository: CartRepository,
@@ -43,45 +45,76 @@ class DetailViewModel @OptIn(UnstableApi::class) constructor
     val addToCartSuccess: LiveData<Boolean> = _addToCartSuccess
 
 
+
     init {
-        Log.d("DetailViewModel", "Initializing with productId: $viewModelProductId")
+        Log.i(TAG, "Initializing. Received Product ID: '$viewModelProductId'")
         if (viewModelProductId.isNotBlank() && viewModelProductId != "INVALID_ID_FALLBACK") {
-            loadFullProductDetails() // Fetch full details first
-            loadComments()           // Then load comments (or after product details success)
+            Log.d(TAG, "Valid Product ID. Triggering loadFullProductDetails() and loadComments().")
+            loadFullProductDetails()
+            loadComments()
         } else {
+            Log.e(TAG, "Initialization with INVALID Product ID ('$viewModelProductId'). Cannot load details.")
             _error.value = "Product ID is invalid for ViewModel initialization."
         }
     }
 
     // Call this if you pass the full ProductDetailsModel to the activity
+    @OptIn(UnstableApi::class)
     fun setInitialProductData(product: ProductDetailsModel) {
-        if (_productDetails.value == null) { // Only set if full details haven't loaded yet or to provide initial UI
+        if (_productDetails.value == null) {
+            Log.d(TAG, "setInitialProductData: Setting initial product data. Name: ${product.name}, Current _productDetails is null.")
             _productDetails.value = product
+        } else {
+            Log.d(TAG, "setInitialProductData: Attempted to set initial data, but _productDetails already has a value. Name: ${product.name}, Existing: ${_productDetails.value?.name}")
         }
     }
 
     @OptIn(UnstableApi::class)
     private fun loadFullProductDetails() {
         if (viewModelProductId.isBlank() || viewModelProductId == "INVALID_ID_FALLBACK") {
+            Log.w(
+                TAG,
+                "loadFullProductDetails: Skipped. Product ID is missing or invalid ('$viewModelProductId')."
+            )
             _error.value = "Cannot load product details: Product ID is missing or invalid."
             return
         }
+
+        Log.i(
+            TAG,
+            "loadFullProductDetails: Starting to fetch full product details for ID: '$viewModelProductId'."
+        )
         _isLoadingProduct.value = true
         viewModelScope.launch {
-            Log.d("DetailViewModel", "Fetching full product details for ID: $viewModelProductId")
-            // Assuming productRepository has a method like getProductDetailsById
+            Log.d(
+                TAG,
+                "loadFullProductDetails: Coroutine launched. Calling repository.getProductDetails for ID: '$viewModelProductId'."
+            )
             val result = productRepository.getProductDetails(viewModelProductId)
             result.fold(
                 onSuccess = { fullProduct ->
+                    Log.i(
+                        TAG,
+                        "loadFullProductDetails: Successfully fetched full product details. Product Name: '${fullProduct.name}', ID: '${fullProduct.productId}'. Data: $fullProduct"
+                    )
+                    Log.d(
+                        TAG,
+                        "Full details - Desc: ${fullProduct.description?.take(30)}, Category: ${fullProduct.categoryName}, Stock: ${fullProduct.stock}"
+                    )
                     _productDetails.value = fullProduct
-                    Log.d("DetailViewModel", "Successfully fetched full product details: ${fullProduct.name}")
-                    // Optionally, trigger comment loading here if you want it strictly after product details
-                    // loadComments()
                 },
                 onFailure = { e ->
+                    Log.e(
+                        TAG,
+                        "loadFullProductDetails: Failed to fetch product details for ID: '$viewModelProductId'. Error: ${e.message}",
+                        e
+                    )
                     _error.value = "Failed to load product details: ${e.message}"
-                    Log.e("DetailViewModel", "Error fetching product details: ${e.message}", e)
                 }
+            )
+            Log.d(
+                TAG,
+                "loadFullProductDetails: Fetch operation complete for ID: '$viewModelProductId'. Setting isLoadingProduct to false."
             )
             _isLoadingProduct.value = false
         }

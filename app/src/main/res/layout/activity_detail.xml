@@ -95,56 +95,67 @@
             </LinearLayout>
 
             <!-- Product type and rating -->
-            <LinearLayout
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
+                android:layout_marginTop="8dp">
 
                 <TextView
                     android:id="@+id/textView11"
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:text="Loại sản phẩm"
                     android:textColor="@color/black"
                     android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
 
                 <TextView
                     android:id="@+id/categoryNameTxt"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Đang tải..."
-                    android:textSize="16sp"/>
-
-                <ImageView
-                    android:id="@+id/imageView5"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_vertical"
-                    android:layout_marginEnd="8dp"
-                    app:srcCompat="@drawable/star" />
+                    android:textSize="16sp"
+                    android:layout_marginStart="8dp"
+                    app:layout_constraintStart_toEndOf="@id/textView11"
+                    app:layout_constraintTop_toTopOf="@id/textView11"
+                    app:layout_constraintBottom_toBottomOf="@id/textView11"/>
 
                 <TextView
                     android:id="@+id/raitingTxt"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/black"
-                    android:text="5" />
-            </LinearLayout>
+                    android:text="5"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
 
-            <!-- Model list -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/model_list"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:clipToPadding="false" />
+                <ImageView
+                    android:id="@+id/imageView5"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    app:srcCompat="@drawable/star"
+                    app:layout_constraintEnd_toStartOf="@id/raitingTxt"
+                    app:layout_constraintTop_toTopOf="@id/raitingTxt"
+                    app:layout_constraintBottom_toBottomOf="@id/raitingTxt"/>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+<!--            &lt;!&ndash; Model list &ndash;&gt;-->
+<!--            <androidx.recyclerview.widget.RecyclerView-->
+<!--                android:id="@+id/model_list"-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_marginTop="16dp"-->
+<!--                android:paddingStart="8dp"-->
+<!--                android:paddingEnd="8dp"-->
+<!--                android:clipToPadding="false" />-->
 
             <!-- Description -->
             <TextView
