@@ -48,7 +48,7 @@ class CommentAdapter(private var comments: MutableList<ApiCommentModel>) :
 
         fun bind(comment: ApiCommentModel) {
             binding.userNameTxt.text = comment.userName ?: "Anonymous"
-            binding.commentTxt.text = comment.commentText
+            binding.commentTxt.text = comment.content
 
             // Format date (example)
             binding.dateTxt.text = comment.createdAt?.let { formatDisplayDate(it) } ?: "Just now"

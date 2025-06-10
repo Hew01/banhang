@@ -3,6 +3,7 @@ package com.example.banhangs.Network
 // In a new file, e.g., network/ApiService.kt
 import com.example.banhangs.Model.AddToCartRequest
 import com.example.banhangs.Model.ApiCommentModel
+import com.example.banhangs.Model.CancelOrderRequest
 import com.example.banhangs.Model.CartItemUpdateRequest
 import com.example.banhangs.Model.CategoriesApiResponse
 import com.example.banhangs.Model.ChangePasswordRequest
@@ -12,6 +13,9 @@ import com.example.banhangs.Model.GenericSuccessApiResponse
 import com.example.banhangs.Model.ProductDetailsModel
 import com.example.banhangs.Model.LoginApiResponse
 import com.example.banhangs.Model.LoginRequest
+import com.example.banhangs.Model.OrderCreateModel
+import com.example.banhangs.Model.OrderData
+import com.example.banhangs.Model.OrderDetailsApiResponse
 import com.example.banhangs.Model.OrdersApiResponse
 import com.example.banhangs.Model.PlaceOrderRequest
 import com.example.banhangs.Model.PlaceOrderResponseData
@@ -119,24 +123,43 @@ interface ApiService {
     ): Response<PlaceOrderResponseData> // Define OrderConfirmation model
 
 
-    @GET("api/products/{productId}/comments") // Example endpoint
-    suspend fun getProductComments(@Path("productId") productId: String): Response<CommentsListApiResponse>
+    /**
+     * Fetch all comments for a specific product.
+     * Endpoint: GET api/Comments/product/{id}
+     * Authorization: Optional
+     */
+    @GET("api/Comments/product/{id}")
+    suspend fun getProductComments(
+        @Path("id") productId: String,
+        @Header("Authorization") token: String? // Token is optional
+    ): Response<ApiResponse<List<ApiCommentModel>>> // Assuming ApiCommentResponseModel is your detailed comment model for this response
 
-    @POST("api/products/{productId}/comments") // Example endpoint
-    suspend fun postProductComment(
-        @Path("productId") productId: String,
-        @Body commentRequest: PostCommentRequest
-    ): Response<ApiResponse<ApiCommentModel>> // Assuming API returns the created comment
-    // Or: Response<GenericSuccessApiResponse> if it just returns success:true
+    /**
+     * Add a new comment to a product.
+     * Endpoint: POST api/Comments
+     * Authorization: Required
+     */
+    @POST("api/Comments")
+    suspend fun addComment(
+        @Header("Authorization") token: String, // Token is required
+        @Body commentCreateModel: PostCommentRequest
+    ): Response<ApiResponse<ApiCommentModel>> // data field is the comment ID (String)
 
-    @GET("api/Orders")
-    suspend fun getOrders(@Header("Authorization") token: String): Response<OrdersApiResponse>
+    /**
+     * Delete a comment.
+     * Endpoint: DELETE api/Comments/{id}
+     * Authorization: Required
+     */
+    @DELETE("api/Comments/{id}")
+    suspend fun deleteComment(
+        @Path("id") commentId: String,
+        @Header("Authorization") token: String // Token is required
+    ): Response<GenericSuccessApiResponse> // data field is Boolean
 
-    @GET("api/Users/{id}") // Endpoint to get user details by ID
+    @GET("api/Users")
     suspend fun getUserDetails(
-        @Header("Authorization") token: String, // Assuming this endpoint also requires auth
-        @Path("id") userId: String
-    ): Response<ApiResponse<UserData>> // Or Response<UserData> if API returns it directly
+        @Header("Authorization") token: String,
+    ): Response<ApiResponse<UserData>>
 
     @PUT("api/Users/update-information/{id}")
     suspend fun updateUserDetails(
@@ -155,4 +178,54 @@ interface ApiService {
     suspend fun logoutUserApi(
         @Header("Authorization") token: String
     ): Response<GenericSuccessApiResponse>
+
+    @POST("api/orders/create")
+    suspend fun createGenericOrder(
+        @Header("Authorization") token: String,
+        @Body orderRequest: PlaceOrderRequest // Your existing PlaceOrderRequest
+    ): Response<PlaceOrderResponseData>
+
+    @GET("api/Orders/user/{userId}")
+    suspend fun getOrdersByUserId(
+        @Path("userId") userId: String,
+        @Header("Authorization") token: String? // Assuming optional for now
+    ): Response<ApiResponse<List<OrderData>>>
+
+    /**
+     * Cancel a specific order for a user.
+     * Endpoint: POST api/Orders/{id}/cancel/{userId}
+     * Authorization: Required
+     */
+    @POST("api/Orders/{id}/cancel/{userId}")
+    suspend fun cancelOrder(
+        @Path("id") orderId: String,
+        @Path("userId") userId: String, // Server should ideally validate this userId against the token
+        @Header("Authorization") token: String, // Required
+        @Body cancelOrderModel: CancelOrderRequest
+    ): Response<ApiResponse<Boolean>>
+
+    /**
+     * Create a Cash-on-Delivery (COD) order.
+     * Endpoint: POST api/Orders/cod-order/{userId}
+     * Authorization: Required
+     */
+    @POST("api/Orders/cod-order/{userId}")
+    suspend fun createCodOrder(
+        @Path("userId") userId: String, // Server should ideally validate this userId against the token
+        @Header("Authorization") token: String, // Required
+        @Body orderCreateModel: OrderCreateModel // Assuming same model as COD
+    ): Response<ApiResponse<String>> // data field is the created order ID (String)
+
+    /**
+     * Create a pre-paid online order.
+     * Endpoint: POST api/Orders/pre-pay-order/{userId}
+     * Authorization: Required
+     */
+    @POST("api/Orders/pre-pay-order/{userId}")
+    suspend fun createPrePayOrder(
+        @Path("userId") userId: String, // Server should ideally validate this userId against the token
+        @Header("Authorization") token: String, // Required
+        @Body orderCreateModel: OrderCreateModel // Assuming same model as COD
+    ): Response<ApiResponse<String>>
+
 }

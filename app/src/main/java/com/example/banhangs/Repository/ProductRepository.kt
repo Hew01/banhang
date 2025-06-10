@@ -173,7 +173,7 @@ class ProductRepository(private val apiService: ApiService) {
                 // Assuming ApiService has:
                 // suspend fun getProductComments(@Path("productId") productId: String): Response<CommentsListApiResponse>
                 // And CommentsListApiResponse is typealias for ApiResponse<List<ApiCommentModel>>
-                val response = apiService.getProductComments(productId)
+                val response = apiService.getProductComments(productId, productId)
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
                     if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data != null) {
@@ -203,7 +203,7 @@ class ProductRepository(private val apiService: ApiService) {
                 val request = PostCommentRequest(productId, commentText, rating)
                 // Assuming ApiService has:
                 // suspend fun postProductComment(@Path("productId") productId: String, @Body commentRequest: PostCommentRequest): Response<ApiResponse<ApiCommentModel>>
-                val response = apiService.postProductComment(productId, request)
+                val response = apiService.addComment(productId, request)
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
                     if (apiResponse != null && apiResponse.retCode == 0 && apiResponse.data != null) {

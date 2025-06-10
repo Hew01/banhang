@@ -318,6 +318,13 @@ data class OrderSummaryData(
 ) : Parcelable
 typealias OrdersListApiResponse = ApiResponse<List<OrderSummaryData>>
 
+data class OrderCreateModel(
+    @SerializedName("items") val items: List<OrderItemRequestData>,
+    @SerializedName("shippingAddress") val shippingAddress: String, // "123 Main St"
+    @SerializedName("billingAddress") val billingAddress: String? = null, // Optional, could default to shipping
+    @SerializedName("shippingMethodId") val shippingMethodId: String? = null, // Or Int
+    @SerializedName("notes") val notes: String? = null)
+
 // For GET /api/Orders/{id} - Response Data (Detailed single order)
 @Parcelize // If passed around
 data class OrderDetailData(
@@ -350,7 +357,6 @@ typealias OrderDetailsApiResponse = ApiResponse<OrderDetailData>
 // For POST /api/Orders/{id}/cancel - Request Body
 data class CancelOrderRequest(
     @SerializedName("reason") val reason: String,
-    @SerializedName("notes") val notes: String?
 )
 
 @Parcelize
@@ -360,16 +366,16 @@ data class ApiCommentModel( // Renamed to avoid conflict if you had a Firebase o
     @SerializedName("userId") val userId: String?,
     @SerializedName("userName") val userName: String?, // Or user's display name
     @SerializedName("userProfileImageUrl") val userProfileImageUrl: String?,
-    @SerializedName("commentText") val commentText: String,
+    @SerializedName("content") val content: String,
     @SerializedName("createdAt") val createdAt: String?, // e.g., "2023-10-27T10:00:00Z"
-    @SerializedName("rating") val rating: Float? // Optional: if comments include ratings
+    @SerializedName("stars") val stars: Float? // Optional: if comments include ratings
     // Add any other fields your API provides for a comment
 ) : Parcelable
 
 data class PostCommentRequest(
     @SerializedName("productId") val productId: String,
-    @SerializedName("commentText") val commentText: String,
-    @SerializedName("rating") val rating: Float? // Optional
+    @SerializedName("content") val content: String,
+    @SerializedName("stars") val stars: Float? // Optional
 )
 
 // Assuming a generic success response for posting a comment

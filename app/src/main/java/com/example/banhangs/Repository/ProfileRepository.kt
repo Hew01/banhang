@@ -36,7 +36,7 @@ class ProfileRepository(
         }
 
         return try {
-            val response = apiService.getUserDetails("Bearer $token", userId)
+            val response = apiService.getUserDetails("Bearer $token")
             if (response.isSuccessful) {
                 val apiResponse = response.body() // This should be UserDataApiResponse
                 if (apiResponse?.retCode == 0 && apiResponse.data != null) {

@@ -27,16 +27,24 @@ class MyOrderViewModel(application: Application) : AndroidViewModel(application)
     private val apiService: ApiService by lazy { RetrofitClient.instance }
     private val sessionManager: SessionManager = SessionManager(application)
     private val TAG = "MyOrderViewModel"
+    private var userId: String? = null
+
 
     fun loadOrders() {
         val token = sessionManager.fetchAuthToken()
+        val currentUserId = sessionManager.fetchUserId()
         if (token == null) {
             _errorMessage.value = "User not authenticated. Please log in."
             Log.e(TAG, "loadOrders: Auth token is null")
             _isLoading.value = false // Ensure loading stops
             return
         }
-
+        if (currentUserId == null) { // Add this check
+            _errorMessage.value = "User ID not found. Cannot load orders."
+            Log.e(TAG, "loadOrders: User ID is null")
+            _isLoading.value = false
+            return
+        }
         _isLoading.value = true
         _errorMessage.value = null // Clear previous errors
         Log.d(TAG, "Loading orders with token...")
@@ -45,7 +53,7 @@ class MyOrderViewModel(application: Application) : AndroidViewModel(application)
             try {
                 // Ensure your ApiService.getOrders() is a suspend function
                 // and takes the Authorization header.
-                val response = apiService.getOrders("Bearer $token")
+                val response = apiService.getOrdersByUserId(currentUserId,"Bearer $token")
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
                     if (apiResponse != null && apiResponse.retCode == 0) { // Assuming ERetCode.Successfull is 0
