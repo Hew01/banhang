@@ -10,24 +10,33 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.compose.ui.semantics.text
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope // For launching coroutines
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.banhangs.Adapter.CartAdapter
+import com.example.banhangs.Model.OrderCreateModel
+import com.example.banhangs.Model.OrderItemRequestData
 import com.example.banhangs.R
 import com.example.banhangs.Repository.CartRepository // Assuming you have this
 import com.example.banhangs.ViewModel.CartViewModel
 import com.example.banhangs.ViewModel.CartViewModelFactory
 import com.example.banhangs.databinding.ActivityCartBinding
 import com.example.banhangs.Model.VNPayModel // Your simple VNPayModel
+import com.example.banhangs.Network.ApiResponse
 import com.example.banhangs.Network.ApiService // Your Retrofit ApiService
 import com.example.banhangs.Network.RetrofitClient // Or your way to get ApiService instance
 import com.example.banhangs.Repository.UserPreferencesRepository
 import com.example.banhangs.Utilities.VNPayUtils
 import kotlinx.coroutines.launch // For coroutines
+import retrofit2.Response
 import java.net.InetAddress
 import java.text.NumberFormat
 import java.util.Locale
+import kotlin.text.firstOrNull
+import kotlin.text.isBlank
+import kotlin.text.isNotBlank
+import kotlinx.coroutines.flow.firstOrNull
 
 class CartActivity : BaseActivity() {
 
@@ -119,13 +128,15 @@ class CartActivity : BaseActivity() {
 
         // Cash
         binding.metod1.setBackgroundResource(if (method == 1) R.drawable.green_bg_selected else R.drawable.grey_bg_selected)
-        binding.metodIc1.imageTintList = ColorStateList.valueOf(if (method == 1) greenColor else blackColor)
+        binding.metodIc1.imageTintList =
+            ColorStateList.valueOf(if (method == 1) greenColor else blackColor)
         binding.methodtitle1.setTextColor(if (method == 1) greenColor else blackColor)
         binding.methodSubTitle1.setTextColor(if (method == 1) greenColor else greyColor)
 
         // VNPay
         binding.method2.setBackgroundResource(if (method == 2) R.drawable.green_bg_selected else R.drawable.grey_bg_selected)
-        binding.metodIc2.imageTintList = ColorStateList.valueOf(if (method == 2) greenColor else blackColor)
+        binding.metodIc2.imageTintList =
+            ColorStateList.valueOf(if (method == 2) greenColor else blackColor)
         binding.methodtitle2.setTextColor(if (method == 2) greenColor else blackColor)
         binding.methodSubTitle2.setTextColor(if (method == 2) greenColor else greyColor)
 
@@ -187,14 +198,22 @@ class CartActivity : BaseActivity() {
 
     private fun paymentVNPay() {
         val currentSubtotal = viewModel.totalAmount.value ?: 0.0
-        if (currentSubtotal <= 0 && viewModel.cartItems.value.isNullOrEmpty()) { Toast.makeText(this,  "Your cart is empty or total is zero.", Toast.LENGTH_SHORT). show( );  return }
+        if (currentSubtotal <= 0 && viewModel.cartItems.value.isNullOrEmpty()) {
+            Toast.makeText(this, "Your cart is empty or total is zero.", Toast.LENGTH_SHORT)
+                .show(); return
+        }
         val finalTotalForPayment = currentSubtotal + (currentSubtotal * taxRate) + deliveryFee
-        if (finalTotalForPayment <=0) {
-            Toast.makeText(this, "Cannot proceed with zero or negative total after fees.", Toast.LENGTH_SHORT).show()
+        if (finalTotalForPayment <= 0) {
+            Toast.makeText(
+                this,
+                "Cannot proceed with zero or negative total after fees.",
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
         val vnpTxnRef = VNPayUtils.generateVnpTxnRef() // Unique ID for this payment attempt
-        val vnpAmount = (finalTotalForPayment * 100).toLong().toString() // VNPay amount is in paisa/cents (Dong * 100)
+        val vnpAmount = (finalTotalForPayment * 100).toLong()
+            .toString() // VNPay amount is in paisa/cents (Dong * 100)
         val vnpIpAddr = getIpAddress()
         val vnpOrderInfo = "Thanh toan don hang $vnpTxnRef" // Description for VNPay
         // 1. Create the VNPayModel instance (simple data holder)
@@ -239,6 +258,7 @@ class CartActivity : BaseActivity() {
         startActivity(intent)
         // The result of VNPay transaction will be handled in onResume() via the RETURN_URL deep link.
     }
+
     private fun getIpAddress(): String {
         // This is a simplified IP address getter. For production, consider robustness.
         // Getting IP address can be tricky and might require network permissions.
@@ -255,6 +275,7 @@ class CartActivity : BaseActivity() {
             return "127.0.0.1" // Fallback IP
         }
     }
+
     override fun onResume() {
         super.onResume()
         // Handle VNPay return if this activity is configured for it (via AndroidManifest RETURN_URL)
@@ -265,13 +286,19 @@ class CartActivity : BaseActivity() {
             intent.data = null // Very important!
         }
     }
+
     private fun handleVNPayReturn(data: Uri) {
         val responseCode = data.getQueryParameter("vnp_ResponseCode")
         val txnRef = data.getQueryParameter("vnp_TxnRef") // Your vnp_TxnRef
-        val amount = data.getQueryParameter("vnp_Amount") // Amount in Dong (e.g., 1000000 for 10,000 VND)
-        val transactionNo = data.getQueryParameter("vnp_TransactionNo") // VNPay's transaction number
+        val amount =
+            data.getQueryParameter("vnp_Amount") // Amount in Dong (e.g., 1000000 for 10,000 VND)
+        val transactionNo =
+            data.getQueryParameter("vnp_TransactionNo") // VNPay's transaction number
         // You can get other parameters like vnp_BankCode, vnp_PayDate, etc.
-        Log.i("VNPayReturn", "Response Code: $responseCode, TxnRef: $txnRef, VNPay TxNo: $transactionNo, Amount: $amount")
+        Log.i(
+            "VNPayReturn",
+            "Response Code: $responseCode, TxnRef: $txnRef, VNPay TxNo: $transactionNo, Amount: $amount"
+        )
         if ("00" == responseCode) {
             // VNPay client-side indicates success.
             // NOW, THE CRITICAL STEP: VERIFY WITH YOUR BACKEND.
@@ -280,152 +307,232 @@ class CartActivity : BaseActivity() {
             // For now, we'll assume client-side success means we can proceed to call our order placement API.
             // In a real app, you'd probably show a "Processing..." message,
             // call your backend to verify and finalize the order, then navigate.
-            Toast.makeText(this, "VNPay Payment Successful (Client). Verifying with server...", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                this,
+                "VNPay Payment Successful (Client). Verifying with server...",
+                Toast.LENGTH_LONG
+            ).show()
             // Call your backend to verify the transaction and finalize the order
             // Pass txnRef, transactionNo, amount, etc., to your backend.
             // Your backend will then use VNPay's API to query the transaction status.
             verifyAndPlaceOrderWithApi("VNPay_Success", txnRef, transactionNo, amount)
         } else {
             // Payment failed or cancelled by user on VNPay page
-            Toast.makeText(this, "VNPay Payment Failed or Cancelled (Code: $responseCode) for order $txnRef.", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                this,
+                "VNPay Payment Failed or Cancelled (Code: $responseCode) for order $txnRef.",
+                Toast.LENGTH_LONG
+            ).show()
             // Optionally, update order status on backend to "Payment Failed" if an order was pre-created.
         }
     }
+
     /**
      * Placeholder for calling your backend API to create an order (e.g., for Cash payment).
      */
-    private fun placeOrderWithApi(paymentMethodName: String, vnpayTxnRef: String? = null) {
+    private fun placeOrderWithApi(
+        paymentMethodIdentifier: String, // e.g., "Cash", "VNPay_Success"
+        vnpayTxnRefForLogging: String? = null
+    ) {
         val cartItemsForOrder = viewModel.cartItems.value
         if (cartItemsForOrder.isNullOrEmpty()) {
             Toast.makeText(this, "Cart is empty, cannot place order.", Toast.LENGTH_SHORT).show()
             return
         }
-        val subtotal = viewModel.totalAmount.value ?: 0.0
-        val orderTax = subtotal * taxRate
-        val orderTotal = subtotal + orderTax + deliveryFee
-// TODO: Construct your OrderRequest object based on your API's needs
-// Example:
-// val orderRequest = OrderRequest(
-        //     userId = "current_user_id", // Get from your auth system
-        //     items = cartItemsForOrder.map { cartItem ->
-        //         OrderItemRequest(productId = cartItem.productId, quantity = cartItem.quantity, priceAtOrder = cartItem.priceAtOrderTime)
-        //     },
-        //     subtotal = subtotal,
-        //     tax = orderTax,
-        //     deliveryFee = deliveryFee,
-        //     totalAmount = orderTotal,
-        //     paymentMethod = paymentMethodName,
-        //     vnpayTransactionRef = vnpayTxnRef, // Include if it's a VNPay pending order
-        //     customerNotes = "Some notes here" // If you have this field
-        // )
-
-        lifecycleScope.launch { // Use lifecycleScope for coroutines in Activity
-            try {
-                // Show loading indicator
-                binding.button.isEnabled = false
-
-                // Replace with your actual API call
-                // val response = apiService.createOrder(orderRequest) // Assuming createOrder endpoint
-
-                // MOCK DELAY - REMOVE THIS IN REAL APP
-                kotlinx.coroutines.delay(2000)
-                val mockSuccess = true // Simulate API success
-                val mockOrderId = "MOCK_ORDER_${System.currentTimeMillis()}"
-
-
-                // if (response.isSuccessful && response.body() != null) { // For real API
-                if (mockSuccess) { // For mock
-                    // val orderConfirmation = response.body()!! // For real API
-                    Toast.makeText(this@CartActivity, "Order placed successfully! Order ID: $mockOrderId", Toast.LENGTH_LONG).show()
-                    viewModel.clearCart() // Clear cart in ViewModel (which should call repository to clear on backend)
-
-                    val intent = Intent(this@CartActivity, OrderSuccessActivity::class.java)
-                    intent.putExtra("orderId", mockOrderId) // Pass order ID to success screen
-                    startActivity(intent)
-                    finish() // Finish CartActivity
-                } else {
-                    // val errorBody = response.errorBody()?.string() ?: "Unknown error" // For real API
-                    val errorBody = "Failed to place order (mock error)" // For mock
-                    Toast.makeText(this@CartActivity, "Failed to place order: $errorBody", Toast.LENGTH_LONG).show()
-                }
-            } catch (e: Exception) {
-                Log.e("PlaceOrderAPI", "Error placing order", e)
-                Toast.makeText(this@CartActivity, "Error placing order: ${e.message}", Toast.LENGTH_LONG).show()
-            } finally {
-                // Hide loading indicator
-                binding.button.isEnabled = true
-            }
-        }
-    }
-
-    /**
-     * Placeholder for calling your backend API to verify VNPay transaction and then place/finalize the order.
-     */
-    private fun verifyAndPlaceOrderWithApi(
-        paymentMethodName: String,
-        vnpayTxnRef: String?,
-        vnpayTransactionNo: String?,
-        vnpayAmount: String?
-    ) {
-        val cartItemsForOrder = viewModel.cartItems.value
-        if (cartItemsForOrder.isNullOrEmpty() && paymentMethodName.contains("VNPay")) {
-            // This might happen if the cart was cleared prematurely or state was lost.
-            // For VNPay, the txnRef is key. Your backend should be able to fetch order details
-            // if an order was created in a "pending" state using this txnRef.
-            Log.w("VerifyOrderAPI", "Cart is empty during VNPay verification for $vnpayTxnRef. Backend should handle.")
-        }
-
-        val subtotal = viewModel.totalAmount.value ?: 0.0 // This might be stale if cart was cleared.
-        val orderTax = subtotal * taxRate
-        val orderTotal = subtotal + orderTax + deliveryFee
-
-        // TODO: Construct your VerifyAndPlaceOrderRequest object
-        // This request would go to your backend. Your backend then:
-        // 1. Calls VNPay's queryDR endpoint using vnpayTxnRef to confirm the transaction status and amount.
-        // 2. If VNPay confirms success and amount matches, your backend finalizes the order (or creates it if not pending).
-        // Example:
-        // val verifyRequest = VerifyVnpayOrderRequest(
-        //     vnpayTransactionReference = vnpayTxnRef,
-        //     vnpayTransactionNumber = vnpayTransactionNo,
-        //     vnpayAmountReported = vnpayAmount, // Amount from VNPay return (e.g., "1000000")
-        //     // Include cart items or original order details if your backend needs them for verification/creation
-        //     items = cartItemsForOrder?.map { ... } // if needed
-        // )
 
         lifecycleScope.launch {
+            val currentToken = userPreferencesRepository.userTokenFlow.firstOrNull()
+            val currentUserId = userPreferencesRepository.userIdFlow.firstOrNull()
+
+            if (currentToken == null || currentUserId == null) {
+                Toast.makeText(this@CartActivity, "User not authenticated.", Toast.LENGTH_LONG).show()
+                return@launch
+            }
+
+            // --- Fetch other customer details (ensure these are available) ---
+            val customerName = userPreferencesRepository.userFullNameFlow.firstOrNull() ?: "N/A" // Replace with actual logic
+            val customerPhoneNumber = userPreferencesRepository.userPhoneNumberFlow.firstOrNull() ?: "N/A" // Replace with actual logic
+            val customerEmail = userPreferencesRepository.userEmailFlow.firstOrNull() ?: "N/A" // Replace with actual logic
+
+            // --- Construct Order Items ---
+            val orderItemsRequest = cartItemsForOrder.map { cartItem ->
+                val currentPrice = cartItem.priceAtOrderTime // Assuming this exists on your CartItem
+                val itemDiscount = cartItem.discount ?: 0.0
+                val calculatedTotalPrice = (currentPrice * cartItem.quantity) - itemDiscount
+                OrderItemRequestData(
+                    productId = cartItem.productId,
+                    quantity = cartItem.quantity,
+                    priceAtOrderTime = currentPrice,
+                    discount = itemDiscount,
+                    totalPrice = calculatedTotalPrice
+                    // orderId = null // Or some placeholder if backend insists, but ideally not needed for creation
+                )
+            }
+
+            val shippingAddressStr = binding.shippingAddressEdt.text.toString()
+            val voucherCodeStr = binding.voucherCodeEdt.text.toString().takeIf { it.isNotBlank() } // Assuming you add an EditText for voucher
+
+            if (shippingAddressStr.isBlank()) {
+                Toast.makeText(this@CartActivity, "Please enter a shipping address.", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+
+            // --- Determine Payment Method Integer ---
+            // This needs to map to what your backend expects for "Cash" or "VNPay"
+            // Example: Let's say backend expects 0 for Cash, 1 for VNPay (you need to confirm this)
+            val paymentMethodInt = when {
+                paymentMethodIdentifier.equals("Cash", ignoreCase = true) -> 0 // Example value for Cash
+                paymentMethodIdentifier.equals("VNPay_Success", ignoreCase = true) -> 1 // Example value for VNPay
+                else -> -1 // Should not happen with current logic, but good for safety
+            }
+
+            if (paymentMethodInt == -1) {
+                Toast.makeText(this@CartActivity, "Invalid payment method for API.", Toast.LENGTH_LONG).show()
+                return@launch
+            }
+
+
+            val orderRequest = OrderCreateModel(
+                customerId = currentUserId,
+                customerName = customerName, // Ensure this is fetched correctly
+                customerPhonenumber = customerPhoneNumber, // Ensure this is fetched correctly
+                customerEmail = customerEmail,       // Ensure this is fetched correctly
+                shippingAddress = shippingAddressStr,
+                voucherCode = voucherCodeStr, // Pass the voucher code (can be null if optional)
+                items = orderItemsRequest,
+                paymentMethod = paymentMethodInt // Pass the integer payment method
+            )
+
+            // --- Determine which API endpoint to call ---
+            // This part of your logic might need to change if the backend uses the same
+            // endpoint for both COD and Pre-Paid and differentiates by the 'paymentMethod' field
+            // in the request body. However, your previous code had distinct endpoints.
+            // Let's assume distinct endpoints for now, as per your original structure.
+
             try {
-                binding.button.isEnabled = false
+                binding.button.isEnabled = false // Disable button during API call
 
-                // Replace with your actual API call to your backend verification endpoint
-                // val response = apiService.verifyAndFinalizeOrder(verifyRequest)
+                val response: Response<ApiResponse<String>> // Assuming ApiResponse<String> where String is Order ID
 
-                // MOCK DELAY & RESPONSE - REMOVE THIS
-                kotlinx.coroutines.delay(2500)
-                val mockVerificationSuccess = true
-                val mockVerifiedOrderId = vnpayTxnRef ?: "MOCK_VNPay_${System.currentTimeMillis()}"
+                // IMPORTANT: Verify if your backend uses different endpoints for COD vs. Pre-Pay
+                // or if it's the same endpoint and the 'paymentMethod' field in OrderCreateModel
+                // dictates the type. The provided spec was for "cod-order".
+                // If it's the same endpoint for pre-pay, you'd just call that one.
 
-                // if (response.isSuccessful && response.body()?.orderConfirmed == true) { // For real API
-                if (mockVerificationSuccess) { // For mock
-                    // val orderConfirmation = response.body()!! // For real API
-                    Toast.makeText(this@CartActivity, "Order $mockVerifiedOrderId confirmed via VNPay!", Toast.LENGTH_LONG).show()
-                    viewModel.clearCart() // Clear cart in ViewModel
-
-                    val intent = Intent(this@CartActivity, OrderSuccessActivity::class.java)
-                    intent.putExtra("orderId", mockVerifiedOrderId)
-                    startActivity(intent)
-                    finish()
+                if (paymentMethodIdentifier.equals("Cash", ignoreCase = true)) {
+                    Log.d(
+                        "PlaceOrderAPI",
+                        "Placing COD order for user $currentUserId: $orderRequest"
+                    )
+                    // Ensure apiService.createCodOrder expects the new OrderCreateModel
+                    response = apiService.createCodOrder(
+                        // The userId might be redundant in the path if it's already in OrderCreateModel.
+                        // Check your API spec. If customerId in the body is enough,
+                        // the {userId} path parameter for createCodOrder might be removable from the API definition.
+                        // For now, keeping it as per your previous structure.
+                        currentUserId, // Or remove if not needed in path and only in body
+                        "Bearer $currentToken",
+                        orderRequest
+                    )
+                } else if (paymentMethodIdentifier.equals("VNPay_Success", ignoreCase = true)) {
+                    Log.d(
+                        "PlaceOrderAPI",
+                        "Placing Pre-Paid order for user $currentUserId (VNPay TxnRef for log: $vnpayTxnRefForLogging): $orderRequest"
+                    )
+                    // Ensure apiService.createPrePayOrder expects the new OrderCreateModel
+                    // You'll need to confirm the request body for pre-pay orders.
+                    // It might be identical to COD or slightly different.
+                    // For this example, we'll assume it's the same OrderCreateModel.
+                    response = apiService.createPrePayOrder( // Or a generic createOrder if endpoints are merged
+                        currentUserId, // Or remove if not needed in path
+                        "Bearer $currentToken",
+                        orderRequest
+                    )
                 } else {
-                    // val errorMsg = response.body()?.message ?: response.errorBody()?.string() ?: "VNPay verification failed on server." // For real API
-                    val errorMsg = "VNPay verification failed on server (mock)." // For mock
-                    Toast.makeText(this@CartActivity, errorMsg, Toast.LENGTH_LONG).show()
-                    // Potentially update order status on backend to "Payment Verification Failed"
+                    // This case should ideally not be reached if paymentMethodInt check is done correctly
+                    Toast.makeText(
+                        this@CartActivity,
+                        "Unsupported payment method for API call.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    binding.button.isEnabled = true
+                    return@launch // Exit coroutine
+                }
+
+                if (response.isSuccessful && response.body() != null) {
+                    val apiResponse = response.body()!!
+                    if (apiResponse.retCode == 0 && apiResponse.data != null) { // Assuming retCode 0 is success
+                        val newOrderId = apiResponse.data // This is the Order ID string
+                        Toast.makeText(
+                            this@CartActivity,
+                            "Order placed successfully! Order ID: $newOrderId",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                        viewModel.clearCart() // This should also trigger backend cart clearing via repository
+
+                        val intent = Intent(this@CartActivity, OrderSuccessActivity::class.java)
+                        intent.putExtra("orderId", newOrderId)
+                        startActivity(intent)
+                        finish() // Finish CartActivity
+                    } else {
+                        val errorMessage = apiResponse.systemMessage
+                            ?: "Failed to place order (API error code: ${apiResponse.retCode})"
+                        Log.e(
+                            "PlaceOrderAPI",
+                            "API Error: $errorMessage - Full Response: $apiResponse"
+                        )
+                        Toast.makeText(this@CartActivity, errorMessage, Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                    Log.e("PlaceOrderAPI", "HTTP Error: ${response.code()} - $errorBody")
+                    Toast.makeText(
+                        this@CartActivity,
+                        "Failed to place order: ${response.message()} ($errorBody)",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    // Consider parsing the errorBody JSON here to show more specific messages
+                    // from the backend if it follows the same structure as the 400 validation errors.
                 }
             } catch (e: Exception) {
-                Log.e("VerifyOrderAPI", "Error verifying/placing VNPay order", e)
-                Toast.makeText(this@CartActivity, "Error verifying VNPay order: ${e.message}", Toast.LENGTH_LONG).show()
+                Log.e("PlaceOrderAPI", "Exception placing order", e)
+                Toast.makeText(
+                    this@CartActivity,
+                    "Error placing order: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
             } finally {
-                binding.button.isEnabled = true
+                binding.button.isEnabled = true // Re-enable button
             }
-        }
+        } // End of lifecycleScope.launch
+    }
+
+    // Ensure you have this function for the VNPay flow
+    private fun verifyAndPlaceOrderWithApi(
+        paymentMethodName: String, // Should be "VNPay_Success"
+        vnpayTxnRef: String?,
+        vnpayTransactionNo: String?, // For server-side verification
+        vnpayAmount: String?         // For server-side verification
+    ) {
+        // CRITICAL: Implement server-side verification of VNPay transaction first.
+        // This is a placeholder.
+        Log.i(
+            "VerifyAndPlaceOrder",
+            "VNPay client success for $vnpayTxnRef. Proceeding to place order with backend."
+        )
+        Log.d(
+            "VerifyAndPlaceOrder",
+            "VNPay Details - TxnRef: $vnpayTxnRef, TxnNo: $vnpayTransactionNo, Amount: $vnpayAmount"
+        )
+
+
+        // Call the generic placeOrderWithApi function
+        // The address and notes details should still be in the EditText fields
+        // or retrieved from the ViewModel if you've saved them there before VNPay redirect.
+        placeOrderWithApi(
+            paymentMethodIdentifier = paymentMethodName, // "VNPay_Success"
+            vnpayTxnRefForLogging = vnpayTxnRef
+        )
     }
 }

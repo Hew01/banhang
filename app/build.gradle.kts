@@ -61,6 +61,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
     implementation(libs.androidx.compose.material)
     implementation(libs.androidx.media3.common.ktx)
+    implementation(libs.androidx.datastore.core.android)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

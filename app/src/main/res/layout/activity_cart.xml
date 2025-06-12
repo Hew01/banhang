@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     tools:context=".Activity.CartActivity">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="48dp"
+        android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -22,6 +22,7 @@
             android:id="@+id/backBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:padding="8dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
@@ -35,7 +36,6 @@
             android:textColor="@color/black"
             android:textSize="25sp"
             android:textStyle="bold"
-
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -44,8 +44,10 @@
 
     <ScrollView
         android:id="@+id/scrollView3"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/constraintLayout2">
@@ -53,27 +55,35 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:descendantFocusability="beforeDescendants"
+            android:focusableInTouchMode="true"
             android:orientation="vertical"
-            android:visibility="visible"
-            tools:visibility="visible">
+            android:paddingBottom="16dp">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/viewCart"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_margin="16dp" />
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:minHeight="100dp"
+                android:nestedScrollingEnabled="false" />
 
             <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/summaryLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_margin="16dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="16dp">
 
-                >
 
                 <TextView
                     android:id="@+id/textView9"
-                    android:layout_width="49dp"
-                    android:layout_height="25dp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     android:text="@string/subtotal"
                     android:textColor="@color/grey"
                     app:layout_constraintStart_toStartOf="parent"
@@ -88,55 +98,55 @@
                     android:textSize="16sp"
                     android:textStyle="bold"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="@+id/textView9" />
 
                 <TextView
                     android:id="@+id/textView12"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
+                    android:layout_marginTop="8dp"
                     android:text="@string/fee_delivery"
                     android:textColor="@color/grey"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toBottomOf="@+id/textView9" />
 
                 <TextView
                     android:id="@+id/deliveryTxt"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
                     android:text="$-"
+                    android:textColor="@color/black"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="@+id/textView12" />
 
                 <TextView
                     android:id="@+id/textView15"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="48dp"
+                    android:layout_marginTop="8dp"
                     android:text="@string/total_tax"
                     android:textColor="@color/grey"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toBottomOf="@+id/textView12" />
 
                 <TextView
                     android:id="@+id/taxTxt"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="48dp"
                     android:text="$-"
+                    android:textColor="@color/black"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+                    app:layout_constraintTop_toTopOf="@+id/textView15" />
 
                 <View
                     android:id="@+id/view"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="1dp"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="16dp"
                     android:background="@color/grey"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
@@ -148,7 +158,9 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="@string/total"
-                    android:textColor="@color/grey"
+                    android:textColor="@color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@+id/view" />
 
@@ -156,20 +168,112 @@
                     android:id="@+id/totalTxt"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
                     android:text="$-"
-                    android:textSize="16sp"
+                    android:textColor="@color/black"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toBottomOf="@+id/view" />
+                    app:layout_constraintTop_toTopOf="@+id/textView14" />
             </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- ADDED ADDRESS AND NOTES FIELDS HERE -->
+            <TextView
+                android:id="@+id/shippingAddressLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="16dp"
+                android:text="Địa chỉ giao hàng (*)"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/shippingAddressEdt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/grey_edittext_bg"
+                android:hint="Nhập địa chỉ giao hàng"
+                android:inputType="textPostalAddress|textMultiLine"
+                android:padding="12dp"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/billingAddressLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="16dp"
+                android:text="Địa chỉ thanh toán (nếu khác)"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/billingAddressEdt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/grey_edittext_bg"
+                android:hint="Nhập địa chỉ thanh toán"
+                android:inputType="textPostalAddress|textMultiLine"
+                android:padding="12dp"
+                android:textSize="14sp" />
+
+            <EditText
+                android:id="@+id/voucherCodeEdt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/grey_edittext_bg"
+                android:hint="Nhập voucher (nếu có)"
+                android:padding="12dp"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/notesLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="16dp"
+                android:text="Ghi chú đơn hàng"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/notesEdt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:background="@drawable/grey_edittext_bg"
+                android:gravity="top"
+                android:hint="Thêm ghi chú cho người bán..."
+                android:inputType="textMultiLine"
+                android:minLines="2"
+                android:padding="12dp"
+                android:textSize="14sp" />
+            <!-- END OF ADDED FIELDS -->
+
 
             <TextView
                 android:id="@+id/textView16"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="24dp"
                 android:layout_marginEnd="16dp"
                 android:text="@string/payment_method"
                 android:textColor="@color/black"
@@ -179,15 +283,16 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
+                android:layout_marginTop="8dp"
                 android:layout_marginEnd="8dp"
                 android:orientation="horizontal">
 
                 <LinearLayout
                     android:id="@+id/metod1"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_margin="8dp"
                     android:layout_weight="0.5"
                     android:background="@drawable/green_bg_selected"
@@ -197,7 +302,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center"
+                        android:gravity="center_vertical"
 
                         android:orientation="horizontal">
 
@@ -205,12 +310,11 @@
                             android:id="@+id/metod_ic_1"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-
                             app:srcCompat="@drawable/cash" />
 
                         <TextView
                             android:id="@+id/methodtitle1"
-                            android:layout_width="wrap_content"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="8dp"
                             android:layout_weight="1"
@@ -225,14 +329,14 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:text="@string/paycheck"
-
-                        android:textColor="@color/green" />
+                        android:textColor="@color/green"
+                        android:textSize="12sp" />
                 </LinearLayout>
 
                 <LinearLayout
                     android:id="@+id/method2"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_margin="8dp"
                     android:layout_weight="0.5"
                     android:background="@drawable/grey_bg_selected"
@@ -242,7 +346,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center"
+                        android:gravity="center_vertical"
 
                         android:orientation="horizontal">
 
@@ -250,12 +354,11 @@
                             android:id="@+id/metod_ic_2"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-
                             app:srcCompat="@drawable/bank" />
 
                         <TextView
                             android:id="@+id/methodtitle2"
-                            android:layout_width="wrap_content"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="8dp"
                             android:layout_weight="1"
@@ -270,8 +373,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:text="@string/bank_paycheck"
-
-                        android:textColor="@color/darkGrey" />
+                        android:textColor="@color/darkGrey"
+                        android:textSize="12sp" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -284,7 +387,8 @@
                 android:background="@drawable/green_button_bg"
                 android:text="Thanh toán"
                 android:textColor="@color/white"
-                android:textSize="16sp" />
+                android:textSize="18sp"
+                android:textStyle="bold" />
         </LinearLayout>
     </ScrollView>
 
@@ -293,11 +397,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Giỏ hàng của bạn trống"
+        android:textSize="18sp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="@+id/scrollView3"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/constraintLayout2"
         tools:visibility="visible" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

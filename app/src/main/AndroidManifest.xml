@@ -82,6 +82,13 @@
         <activity
             android:name=".Activity.DetailActivity"
             android:exported="true" />
+        <activity
+            android:name=".Activity.OrderSuccessActivity"
+            android:exported="false">
+            <!-- You can add intent filters if this activity can be launched by other apps
+                 or specific intents, but for a simple success screen, exported="false"
+                 and no intent filter is usually fine if it's only launched internally. -->
+        </activity>
     </application>
 
 </manifest>

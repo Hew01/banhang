@@ -69,8 +69,8 @@ interface ApiService {
         @Path("categoryId") categoryId: String
     ): Response<ProductsByCategoryResponse>
 
-    @GET("api/Banners")    // << YOUR ACTUAL ENDPOINT FOR BANNERS
-    suspend fun getBanners(): Response<List<SliderModel>>
+    @GET("api/Homes")
+    suspend fun getHomeScreenContent(): Response<HomeApiResponse>
 
     // --- Carts ---
 

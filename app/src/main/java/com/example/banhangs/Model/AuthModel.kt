@@ -283,11 +283,15 @@ data class PlaceOrderRequest(
 )
 
 // Simplified item structure for the PlaceOrderRequest
+@Parcelize
 data class OrderItemRequestData(
     @SerializedName("productId") val productId: String,
-    @SerializedName("quantity") val quantity: Int
+    @SerializedName("quantity") val quantity: Int,
+    @SerializedName("priceAtOrderTime") val priceAtOrderTime: Double,
+    @SerializedName("discount") val discount: Double,
+    @SerializedName("totalPrice") val totalPrice: Double
     // Server will fetch price, name etc., at the time of order creation
-)
+) : Parcelable
 
 // For POST /api/Orders - Response Data
 data class PlaceOrderResponseData(
@@ -318,12 +322,20 @@ data class OrderSummaryData(
 ) : Parcelable
 typealias OrdersListApiResponse = ApiResponse<List<OrderSummaryData>>
 
+@Parcelize
 data class OrderCreateModel(
+    @SerializedName("customerId") val customerId: String,
+    @SerializedName("customerName") val customerName: String,
+    @SerializedName("customerPhonenumber") val customerPhonenumber: String,
+    @SerializedName("customerEmail") val customerEmail: String,
+    @SerializedName("shippingAddress") val shippingAddress: String,
+    @SerializedName("billingAddress") val billingAddress: String? = null, // Kept as optional
+    @SerializedName("voucherCode") val voucherCode: String?, // Added, nullable if optional
     @SerializedName("items") val items: List<OrderItemRequestData>,
-    @SerializedName("shippingAddress") val shippingAddress: String, // "123 Main St"
-    @SerializedName("billingAddress") val billingAddress: String? = null, // Optional, could default to shipping
-    @SerializedName("shippingMethodId") val shippingMethodId: String? = null, // Or Int
-    @SerializedName("notes") val notes: String? = null)
+    @SerializedName("paymentMethod") val paymentMethod: Int, // Added for payment type
+    @SerializedName("shippingMethodId") val shippingMethodId: String? = null, // Kept as optional, or Int
+    @SerializedName("notes") val notes: String? = null // Kept as optional
+) : Parcelable
 
 // For GET /api/Orders/{id} - Response Data (Detailed single order)
 @Parcelize // If passed around
@@ -381,3 +393,26 @@ data class PostCommentRequest(
 // Assuming a generic success response for posting a comment
 // typealias PostCommentApiResponse = ApiResponse<Boolean> // Or it might return the created comment
 typealias CommentsListApiResponse = ApiResponse<List<ApiCommentModel>>
+
+@Parcelize
+data class HomeData(
+    @SerializedName("banner") val bannerImageUrls: List<String>? = emptyList(), // Changed name for clarity
+    @SerializedName("hotProducts") val hotProducts: List<ProductSummaryModel>? = emptyList(),
+    @SerializedName("newProducts") val newProducts: List<ProductSummaryModel>? = emptyList(),
+    @SerializedName("featureProducts") val featureProducts: List<ProductSummaryModel>? = emptyList() // Corrected typo from "feature" to "featured" if intended
+) : Parcelable
+
+@Parcelize
+data class ProductSummaryModel(
+    @SerializedName("productId") val productId: String,
+    @SerializedName("name") val name: String?,
+    @SerializedName("shortDescription") val shortDescription: String?,
+    @SerializedName("mainImageUrl") val mainImageUrl: String?,
+    @SerializedName("categoryName") val categoryName: String?,
+    @SerializedName("stock") val stock: Int?,
+    @SerializedName("price") val price: Double?, // Use Double for price
+    @SerializedName("averageRating") val averageRating: Double?, // Use Double
+    @SerializedName("soldCount") val soldCount: Int?,
+    @SerializedName("ratedCount") val ratedCount: Int?
+    // Add other fields if your summary model needs them, e.g., isOnSale, salePrice
+) : Parcelable

@@ -33,6 +33,7 @@ class MyOrderViewModel(application: Application) : AndroidViewModel(application)
     fun loadOrders() {
         val token = sessionManager.fetchAuthToken()
         val currentUserId = sessionManager.fetchUserId()
+
         if (token == null) {
             _errorMessage.value = "User not authenticated. Please log in."
             Log.e(TAG, "loadOrders: Auth token is null")
@@ -45,37 +46,57 @@ class MyOrderViewModel(application: Application) : AndroidViewModel(application)
             _isLoading.value = false
             return
         }
+
         _isLoading.value = true
         _errorMessage.value = null // Clear previous errors
-        Log.d(TAG, "Loading orders with token...")
+        Log.d(TAG, "Loading orders for userId: $currentUserId with token...")
 
         viewModelScope.launch {
             try {
-                // Ensure your ApiService.getOrders() is a suspend function
-                // and takes the Authorization header.
                 val response = apiService.getOrdersByUserId(currentUserId)
+
+                // Log the raw response body regardless of success if possible
+                // Note: response.body() can only be consumed once.
+                // For robust logging, use an OkHttp Interceptor or read errorBody separately.
+                // However, for debugging, we can try to log it here.
+                // A better way is to use HttpLoggingInterceptor set to Level.BODY
+
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
-                    if (apiResponse != null && apiResponse.retCode == 0) { // Assuming ERetCode.Successfull is 0
+
+                    // Log the parsed body (if successful) or a message if null
+                    if (apiResponse != null) {
+                        // Convert the parsed data back to JSON for logging if needed,
+                        // or log specific fields. For full raw data, HttpLoggingInterceptor is best.
+                        // For now, let's log if data is present and its size.
+                        Log.d(TAG, "Successful response. User ID: $currentUserId Parsed apiResponse: $apiResponse") // Logs the toString() of your ApiResponse
+                        // If you have Gson available and want to log the data part as JSON:
+                        // val gson = Gson()
+                        // Log.d(TAG, "Successful response. Data part as JSON: ${gson.toJson(apiResponse.data)}")
+                    } else {
+                        Log.w(TAG, "Successful response but body is null.")
+                    }
+
+                    if (apiResponse != null && apiResponse.retCode == 0) {
                         _orders.value = apiResponse.data ?: emptyList()
                         if (apiResponse.data.isNullOrEmpty()) {
-                            Log.d(TAG, "Successfully loaded orders, but the list is empty.")
+                            Log.d(TAG, "Successfully loaded orders, but the list is empty. (retCode == 0)")
                         } else {
-                            Log.d(TAG, "Successfully loaded ${apiResponse.data.size} orders.")
+                            Log.d(TAG, "Successfully loaded ${apiResponse.data.size} orders. (retCode == 0)")
                         }
                     } else {
-                        _errorMessage.value = apiResponse?.systemMessage ?: "Failed to load orders: Invalid API response structure."
+                        _errorMessage.value = apiResponse?.systemMessage ?: "Failed to load orders: Invalid API response structure or error retCode."
                         Log.e(TAG, "API Error: RetCode=${apiResponse?.retCode}, Message='${apiResponse?.systemMessage}'")
                     }
                 } else {
-                    val errorBody = response.errorBody()?.string()
+                    val errorBodyString = response.errorBody()?.string() // Consume errorBody once
                     _errorMessage.value = "Error ${response.code()}: ${response.message()}"
-                    Log.e(TAG, "HTTP Error fetching orders: ${response.code()} - ${response.message()}. Error body: $errorBody")
+                    Log.e(TAG, "HTTP Error fetching orders: ${response.code()} - ${response.message()}. Error body: $errorBodyString")
                 }
             } catch (e: IOException) {
                 _errorMessage.value = "Network error. Please check your connection."
                 Log.e(TAG, "Network error: ${e.message}", e)
-            } catch (e: Exception) {
+            } catch (e: Exception) { // Catch more specific exceptions if possible, e.g., JsonSyntaxException
                 _errorMessage.value = "An unexpected error occurred."
                 Log.e(TAG, "Unexpected error: ${e.message}", e)
             } finally {

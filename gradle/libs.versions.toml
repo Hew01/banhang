@@ -12,6 +12,7 @@ constraintlayout = "2.2.1"
 firebase-bom = "33.13.0"
 composeMaterial = "1.4.1"
 media3CommonKtx = "1.7.1"
+datastoreCoreAndroid = "1.1.7"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -29,6 +30,7 @@ firebase-database = { module = "com.google.firebase:firebase-database" }
 firebase-storage = { module = "com.google.firebase:firebase-storage" }
 androidx-compose-material = { group = "androidx.wear.compose", name = "compose-material", version.ref = "composeMaterial" }
 androidx-media3-common-ktx = { group = "androidx.media3", name = "media3-common-ktx", version.ref = "media3CommonKtx" }
+androidx-datastore-core-android = { group = "androidx.datastore", name = "datastore-core-android", version.ref = "datastoreCoreAndroid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
